@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Prepares a fresh Amp orb: PHP 8.4 + Composer, local Postgres, and app dependencies.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+step() { echo "==> [$(date +%T)] $*"; }
+
+HERD_BIN="$HOME/.config/herd-lite/bin"
+
+step "PHP 8.4 and Composer (php.new)"
+if [ ! -x "$HERD_BIN/php" ]; then
+    # The installer calls `clear`, which fails without a terminal.
+    curl -fsSL https://php.new/install/linux/8.4 | sed 's/^\s*clear\s*$/true/' | TERM=dumb bash
+fi
+# The default 128M limit crashes PHPStan.
+grep -qx 'memory_limit=1G' "$HERD_BIN/php.ini" || echo 'memory_limit=1G' >> "$HERD_BIN/php.ini"
+export PATH="$HERD_BIN:$PATH"
+
+# php.new only edits ~/.bashrc, which Amp's non-interactive login shells never read.
+profile_marker="# casaOS: herd-lite PHP"
+if ! grep -Fqx "$profile_marker" "$HOME/.bash_profile" 2>/dev/null; then
+    cat >> "$HOME/.bash_profile" <<EOF
+
+$profile_marker
+case ":\$PATH:" in
+	*":$HERD_BIN:"*) ;;
+	*) export PATH="$HERD_BIN:\$PATH" ;;
+esac
+EOF
+fi
+
+step "Postgres"
+if [ ! -d /usr/lib/postgresql ]; then
+    sudo apt-get update -qq
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq postgresql >/dev/null
+fi
+PG_VERSION="$(ls /usr/lib/postgresql | sort -V | tail -n 1)"
+PG_CONF="/etc/postgresql/$PG_VERSION/main"
+# Orbs are disposable: trade durability for speed.
+printf 'fsync = off\nsynchronous_commit = off\nfull_page_writes = off\n' | sudo tee "$PG_CONF/conf.d/orb.conf" >/dev/null
+# Trust TCP logins, as in CI, so the empty DB_PASSWORD in .env.example works.
+sudo sed -i -E '/^host/ s/(scram-sha-256|md5)$/trust/' "$PG_CONF/pg_hba.conf"
+if pg_lsclusters -h | grep -Eq "^$PG_VERSION +main .* online"; then
+    sudo pg_ctlcluster "$PG_VERSION" main reload
+else
+    sudo pg_ctlcluster "$PG_VERSION" main start
+fi
+psql -h 127.0.0.1 -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'casaos'" | grep -q 1 \
+    || createdb -h 127.0.0.1 -U postgres casaos
+
+step "Composer dependencies"
+composer install --no-interaction --prefer-dist --no-progress
+
+step "Environment"
+[ -f .env ] || cp -- .env.example .env
+grep -q '^APP_KEY=base64:' .env || php artisan key:generate --no-interaction
+
+step "npm dependencies"
+npm install --no-audit --no-fund
+
+step "Migrations"
+php artisan migrate --force --no-interaction
+
+step "Frontend build"
+npm run build
+
+step "Done"

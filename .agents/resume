@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Postgres does not survive an orb pause; start it again on wake.
+set -euo pipefail
+
+PG_VERSION="$(ls /usr/lib/postgresql | sort -V | tail -n 1)"
+if ! pg_lsclusters -h | grep -Eq "^$PG_VERSION +main .* online"; then
+    sudo pg_ctlcluster "$PG_VERSION" main start
+fi
