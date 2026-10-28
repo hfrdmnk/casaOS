@@ -9,6 +9,7 @@ use App\Http\Controllers\Finance\ImportMappingController;
 use App\Http\Controllers\Finance\PayeeController;
 use App\Http\Controllers\Finance\RuleController;
 use App\Http\Controllers\Finance\TransactionController;
+use App\Http\Controllers\Finance\TransferController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('finance')->name('finance.')->group(function () {
@@ -26,6 +27,16 @@ Route::middleware(['auth'])->prefix('finance')->name('finance.')->group(function
 
     Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
     Route::patch('transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');
+    Route::get('transactions/{transaction}/transfer/candidates', [TransferController::class, 'candidates'])->name('transactions.transfer-candidates');
+    Route::post('transactions/{transaction}/transfer/pair', [TransferController::class, 'pair'])->name('transactions.pair');
+    Route::delete('transactions/{transaction}/transfer/pair', [TransferController::class, 'unpair'])->name('transactions.unpair');
+    Route::post('transactions/{transaction}/transfer', [TransferController::class, 'mark'])->name('transactions.mark-transfer');
+    Route::delete('transactions/{transaction}/transfer', [TransferController::class, 'unmark'])->name('transactions.unmark-transfer');
+
+    Route::get('transfers', [TransferController::class, 'index'])->name('transfers.index');
+    Route::post('transfers/find', [TransferController::class, 'find'])->name('transfers.find');
+    Route::post('transfers/suggestions/{suggestion}/confirm', [TransferController::class, 'confirm'])->name('transfers.confirm');
+    Route::post('transfers/suggestions/{suggestion}/dismiss', [TransferController::class, 'dismiss'])->name('transfers.dismiss');
 
     Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
     Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');

@@ -45,6 +45,7 @@ export const OPERATORS: Record<RuleCondition['operator'], string> = {
 export const ACTIONS: { value: RuleAction['type']; label: string }[] = [
     { value: 'set_category', label: 'Set category' },
     { value: 'set_payee', label: 'Set payee' },
+    { value: 'mark_as_transfer', label: 'Mark as transfer' },
 ];
 
 function nameOf(options: Option[], id: unknown): string {
@@ -81,7 +82,12 @@ export function describeAction(
     action: RuleAction,
     options: RuleOptions,
 ): string {
-    return action.type === 'set_category'
-        ? `Category → ${nameOf(options.categories, action.value)}`
-        : `Payee → ${nameOf(options.payees, action.value)}`;
+    switch (action.type) {
+        case 'set_category':
+            return `Category → ${nameOf(options.categories, action.value)}`;
+        case 'set_payee':
+            return `Payee → ${nameOf(options.payees, action.value)}`;
+        default:
+            return 'Mark as transfer';
+    }
 }

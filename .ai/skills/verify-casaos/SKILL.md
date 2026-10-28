@@ -35,24 +35,24 @@ If the session cannot get a database, frontend build or running server (a CI or 
 
 ## Levers
 
-| Need                                        | Command                                                                                                                  |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Check the environment is safe and ready     | `php artisan verify:doctor`                                                                                              |
-| Isolated user in a named state              | `php artisan verify:scenario [states...]` (`--list`; `two-factor`, `finance-empty`, `finance-imported`, `finance-rules`) |
-| Log the browser in as the scenario user     | `php artisan verify:login <scenario> [--path=/settings/profile]` prints `.url`                                           |
-| Read state as JSON                          | `php artisan verify:inspect <scenario> [--only=account] [--only=finance]`                                                |
-| Read mail sent to the scenario              | `php artisan verify:mail <scenario> [--latest]`                                                                          |
-| Current TOTP code for a two-factor scenario | `php artisan verify:inspect <scenario> \| jq -r .account.two_factor.current_code`                                        |
-| Browser                                     | `agent-browser` (preinstalled in orbs; `agent-browser skills get core --full` for usage)                                 |
-| Drain background jobs                       | `php artisan queue:work --stop-when-empty`                                                                               |
-| Clean up this run                           | `php artisan verify:cleanup <scenario>`                                                                                  |
-| Sweep orphans from failed runs              | `php artisan verify:cleanup --stale [--hours=0] [--dry-run]`                                                             |
+| Need                                        | Command                                                                                                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Check the environment is safe and ready     | `php artisan verify:doctor`                                                                                                                   |
+| Isolated user in a named state              | `php artisan verify:scenario [states...]` (`--list`; `two-factor`, `finance-empty`, `finance-imported`, `finance-rules`, `finance-transfers`) |
+| Log the browser in as the scenario user     | `php artisan verify:login <scenario> [--path=/settings/profile]` prints `.url`                                                                |
+| Read state as JSON                          | `php artisan verify:inspect <scenario> [--only=account] [--only=finance]`                                                                     |
+| Read mail sent to the scenario              | `php artisan verify:mail <scenario> [--latest]`                                                                                               |
+| Current TOTP code for a two-factor scenario | `php artisan verify:inspect <scenario> \| jq -r .account.two_factor.current_code`                                                             |
+| Browser                                     | `agent-browser` (preinstalled in orbs; `agent-browser skills get core --full` for usage)                                                      |
+| Drain background jobs                       | `php artisan queue:work --stop-when-empty`                                                                                                    |
+| Clean up this run                           | `php artisan verify:cleanup <scenario>`                                                                                                       |
+| Sweep orphans from failed runs              | `php artisan verify:cleanup --stale [--hours=0] [--dry-run]`                                                                                  |
 
 What they do:
 
 - `verify:scenario` creates one user `verify-<id>@casaos.test` with a generated password and prints `scenario` (the id), `user_id`, `email`, `password` and per-state values (the `two-factor` state prints `two_factor_secret` and `recovery_codes`).
 - `verify:login` prints a signed, expiring `/_verify/login/<user>` URL. Opening it logs in (skipping password and two-factor) and redirects to `--path`. It only works for scenario users; any other user gets 404, and a changed query string gets 403. To prove the real login form, use `email` and `password` from the scenario on `/login` instead.
-- `verify:inspect` prints `finance` (accounts with `balance_today`, snapshots and their `difference`, transaction counts by status, by category and by who set the category and payee (`category_source`/`payee_source`: `manual`, `rule`), categories, payees with counts, rules in order, mappings, batches) and `account`: name, email, timestamps, `sessions` count, `password_reset_pending`, `passkeys`, and `two_factor` (`enabled`, `confirmed_at`, `recovery_codes_remaining`, `current_code`).
+- `verify:inspect` prints `finance` (accounts with `balance_today`, snapshots and their `difference`, transaction counts by status, by category and by who set the category and payee (`category_source`/`payee_source`: `manual`, `rule`), `transfers` (counts `by_source` `auto`/`rule`/`manual`, `pairs`, `without_counterpart`, integrity checks `pairs_with_different_timestamps`/`pairs_with_unequal_amounts`/`orphans`, `suggestions_open`/`suggestions_dismissed`, `suggestions` and `pair_list`), categories, payees with counts, rules in order, mappings, batches) and `account`: name, email, timestamps, `sessions` count, `password_reset_pending`, `passkeys`, and `two_factor` (`enabled`, `confirmed_at`, `recovery_codes_remaining`, `current_code`).
 - `verify:mail` reads mail captured for any `verify-<id>[+tag]@casaos.test` address, whatever the mailer: subject, from, to, text, html, `links`, attachment names. Captures live in `storage/verify/mail/<id>/`.
 - `verify:cleanup` deletes only scenario users, plus their sessions, password reset tokens, captured mail and leftover finance uploads (`storage/app/private/finance-imports/<user_id>/`). User-owned rows (passkeys) cascade. It never touches `storage/verify/runs/`.
 

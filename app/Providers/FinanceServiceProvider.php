@@ -8,6 +8,7 @@ use App\Verification\Finance\FinanceEmpty;
 use App\Verification\Finance\FinanceImported;
 use App\Verification\Finance\FinanceInspector;
 use App\Verification\Finance\FinanceRules;
+use App\Verification\Finance\FinanceTransfers;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -20,7 +21,7 @@ class FinanceServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->tag([FinanceEmpty::class, FinanceImported::class, FinanceRules::class], ScenarioState::TAG);
+        $this->app->tag([FinanceEmpty::class, FinanceImported::class, FinanceRules::class, FinanceTransfers::class], ScenarioState::TAG);
         $this->app->tag([FinanceInspector::class], Inspector::TAG);
     }
 }

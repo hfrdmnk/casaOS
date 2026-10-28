@@ -36,9 +36,29 @@ export type TransactionRow = {
     payee_id: number | null;
     payee: string | null;
     payee_source: FieldSource | null;
+    is_transfer: boolean;
+    transfer_source: TransferSource | null;
+    counterpart: {
+        id: number;
+        account: string;
+        date: string;
+        time: string | null;
+        description: string;
+        amount: number;
+    } | null;
+    /** Only on the transaction list: the row is in an open transfer suggestion. */
+    suggested_transfer?: boolean;
 };
 
 export type FieldSource = 'manual' | 'rule';
+
+export type TransferSource = 'manual' | 'rule' | 'auto';
+
+export type TransferSuggestion = {
+    id: number;
+    outflow: TransactionRow;
+    inflow: TransactionRow;
+};
 
 export type RuleCondition = {
     field: 'description' | 'payee' | 'amount' | 'absolute_amount' | 'account';
@@ -55,7 +75,7 @@ export type RuleCondition = {
 };
 
 export type RuleAction = {
-    type: 'set_category' | 'set_payee';
+    type: 'set_category' | 'set_payee' | 'mark_as_transfer';
     value?: number | null;
     name?: string;
 };
@@ -109,6 +129,8 @@ export type Batch = {
         skipped_reverted: number;
         unmapped_rows: number;
         categorized_by_rules?: number;
+        paired_as_transfers?: number;
+        transfer_suggestions?: number;
         accounts: BatchAccountSummary[];
         currency_rows: {
             line: number;

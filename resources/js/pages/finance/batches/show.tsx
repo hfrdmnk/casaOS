@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { show as showAccount } from '@/routes/finance/accounts';
 import { show } from '@/routes/finance/batches';
 import { index } from '@/routes/finance/import';
+import { index as transfers } from '@/routes/finance/transfers';
 import type { Batch } from '@/types/finance';
 
 export default function ShowBatch({ batch }: { batch: Batch }) {
@@ -20,6 +21,7 @@ export default function ShowBatch({ batch }: { batch: Batch }) {
         ['Skipped as not CHF', summary.skipped_currency],
         ['Removed as reverted', summary.removed_reverted],
         ['Set by rules', summary.categorized_by_rules ?? 0],
+        ['Paired as transfers', summary.paired_as_transfers ?? 0],
     ];
 
     return (
@@ -76,7 +78,7 @@ export default function ShowBatch({ batch }: { batch: Batch }) {
                 </div>
 
                 <dl
-                    className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6"
+                    className="grid gap-4 sm:grid-cols-4 lg:grid-cols-7"
                     data-test="batch-summary"
                 >
                     {totals.map(([label, value]) => (
@@ -90,6 +92,20 @@ export default function ShowBatch({ batch }: { batch: Batch }) {
                         </div>
                     ))}
                 </dl>
+
+                {(summary.transfer_suggestions ?? 0) > 0 &&
+                    !batch.undone_at && (
+                        <p className="text-sm" data-test="transfer-suggestions">
+                            {summary.transfer_suggestions}{' '}
+                            {summary.transfer_suggestions === 1
+                                ? 'possible transfer pair needs'
+                                : 'possible transfer pairs need'}{' '}
+                            a decision.{' '}
+                            <Link href={transfers()} className="underline">
+                                Review suggestions
+                            </Link>
+                        </p>
+                    )}
 
                 {(summary.unmapped_rows > 0 ||
                     summary.skipped_reverted > 0) && (

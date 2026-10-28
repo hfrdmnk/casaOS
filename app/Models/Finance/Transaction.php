@@ -5,6 +5,7 @@ namespace App\Models\Finance;
 use App\Models\Concerns\BelongsToUser;
 use Database\Factories\Finance\TransactionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,9 @@ use Illuminate\Support\Carbon;
  * @property int|null $payee_id
  * @property FieldSource|null $category_source who set `category_id`
  * @property FieldSource|null $payee_source who set `payee_id`
+ * @property bool $is_transfer neither income nor spending; carries no category
+ * @property TransferSource|null $transfer_source who decided `is_transfer`
+ * @property int|null $transfer_counterpart_id the other side of the pair, which points back here
  * @property int|null $import_batch_id
  * @property string $date Y-m-d
  * @property string|null $time
@@ -36,8 +40,9 @@ use Illuminate\Support\Carbon;
  * @property-read Account $account
  * @property-read Category|null $category
  * @property-read Payee|null $payee
+ * @property-read Transaction|null $transferCounterpart
  */
-#[Fillable(['account_id', 'category_id', 'payee_id', 'category_source', 'payee_source', 'import_batch_id', 'date', 'time', 'description', 'amount', 'fee', 'balance_after', 'currency', 'status', 'fingerprint'])]
+#[Fillable(['account_id', 'category_id', 'payee_id', 'category_source', 'payee_source', 'is_transfer', 'transfer_source', 'transfer_counterpart_id', 'import_batch_id', 'date', 'time', 'description', 'amount', 'fee', 'balance_after', 'currency', 'status', 'fingerprint'])]
 class Transaction extends Model
 {
     /** @use HasFactory<TransactionFactory> */
@@ -68,6 +73,29 @@ class Transaction extends Model
     }
 
     /**
+     * The other side of a transfer pair.
+     *
+     * @return BelongsTo<Transaction, $this>
+     */
+    public function transferCounterpart(): BelongsTo
+    {
+        return $this->belongsTo(Transaction::class, 'transfer_counterpart_id');
+    }
+
+    /**
+     * Transactions that count as income or spending: everything but transfers. Totals of income
+     * and spending must go through this scope; balances must not (each side of a transfer moves
+     * its own account's balance).
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeCountsAsIncomeOrSpending(Builder $query): Builder
+    {
+        return $query->where($this->qualifyColumn('is_transfer'), false);
+    }
+
+    /**
      * @return BelongsTo<ImportBatch, $this>
      */
     public function importBatch(): BelongsTo
@@ -87,6 +115,8 @@ class Transaction extends Model
             'status' => TransactionStatus::class,
             'category_source' => FieldSource::class,
             'payee_source' => FieldSource::class,
+            'is_transfer' => 'boolean',
+            'transfer_source' => TransferSource::class,
         ];
     }
 }

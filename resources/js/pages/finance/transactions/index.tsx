@@ -1,17 +1,20 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { WandSparkles } from 'lucide-react';
+import { ArrowLeftRight, WandSparkles } from 'lucide-react';
 import type { FormEvent } from 'react';
 import RuleController from '@/actions/App/Http/Controllers/Finance/RuleController';
 import TransactionController from '@/actions/App/Http/Controllers/Finance/TransactionController';
+import TransferController from '@/actions/App/Http/Controllers/Finance/TransferController';
 import { DataTable, Td, Th } from '@/components/finance/data-table';
 import { Money } from '@/components/finance/money';
 import { NativeSelect } from '@/components/finance/native-select';
 import { StatusBadge } from '@/components/finance/status-badge';
+import { TransferActions, TransferMarker } from '@/components/finance/transfer';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { index } from '@/routes/finance/transactions';
+import { index as transfers } from '@/routes/finance/transfers';
 import type { Option, Paginated, TransactionRow } from '@/types/finance';
 
 type Filters = {
@@ -20,17 +23,20 @@ type Filters = {
     from: string;
     to: string;
     search: string;
+    transfer: string;
 };
 
 export default function Transactions({
     transactions,
     filters,
+    suggestions_count,
     accounts,
     categories,
     payees,
 }: {
     transactions: Paginated<TransactionRow>;
     filters: Filters;
+    suggestions_count: number;
     accounts: Option[];
     categories: Option[];
     payees: Option[];
@@ -61,14 +67,43 @@ export default function Transactions({
         <>
             <Head title="Transactions" />
             <div className="space-y-6 p-4">
-                <Heading
-                    title="Transactions"
-                    description="Every imported transaction, newest first"
-                />
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <Heading
+                        title="Transactions"
+                        description="Every imported transaction, newest first. Transfers are neither income nor spending."
+                    />
+                    <div className="flex items-center gap-2">
+                        {suggestions_count > 0 && (
+                            <Button variant="link" asChild>
+                                <Link
+                                    href={transfers()}
+                                    data-test="suggestions-link"
+                                >
+                                    {suggestions_count} transfer{' '}
+                                    {suggestions_count === 1
+                                        ? 'suggestion'
+                                        : 'suggestions'}
+                                </Link>
+                            </Button>
+                        )}
+                        <Button
+                            variant="outline"
+                            onClick={() =>
+                                router.post(
+                                    TransferController.find.url(),
+                                    {},
+                                    { preserveScroll: true },
+                                )
+                            }
+                        >
+                            <ArrowLeftRight /> Find transfers
+                        </Button>
+                    </div>
+                </div>
 
                 <form
                     onSubmit={applyFilters}
-                    className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6"
+                    className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7"
                     aria-label="Filters"
                 >
                     <div className="grid gap-1 lg:col-span-2">
@@ -112,6 +147,21 @@ export default function Transactions({
                         </NativeSelect>
                     </div>
                     <div className="grid gap-1">
+                        <Label htmlFor="filter-transfer">Transfers</Label>
+                        <NativeSelect
+                            id="filter-transfer"
+                            name="transfer"
+                            defaultValue={filters.transfer}
+                        >
+                            <option value="">All transactions</option>
+                            <option value="yes">Transfers</option>
+                            <option value="no">Not transfers</option>
+                            <option value="suggested">
+                                Suggested transfers
+                            </option>
+                        </NativeSelect>
+                    </div>
+                    <div className="grid gap-1">
                         <Label htmlFor="filter-from">From</Label>
                         <Input
                             id="filter-from"
@@ -129,7 +179,7 @@ export default function Transactions({
                             defaultValue={filters.to}
                         />
                     </div>
-                    <div className="flex gap-2 lg:col-span-6">
+                    <div className="flex gap-2 lg:col-span-7">
                         <Button type="submit">Apply filters</Button>
                         <Button variant="ghost" asChild>
                             <Link href={index()}>Clear</Link>
@@ -209,35 +259,60 @@ export default function Transactions({
                                         />
                                     </Td>
                                     <Td>
-                                        <NativeSelect
-                                            aria-label={`Category for ${transaction.description}`}
-                                            className="h-8 min-w-40"
-                                            value={
-                                                transaction.category_id ?? ''
-                                            }
-                                            onChange={(event) =>
-                                                assign(
-                                                    transaction,
-                                                    'category_id',
-                                                    event.target.value,
-                                                )
-                                            }
-                                        >
-                                            <option value="">
-                                                Uncategorized
-                                            </option>
-                                            {categories.map((category) => (
-                                                <option
-                                                    key={category.id}
-                                                    value={category.id}
+                                        {transaction.is_transfer ? (
+                                            <TransferMarker
+                                                transaction={transaction}
+                                            />
+                                        ) : (
+                                            <>
+                                                <NativeSelect
+                                                    aria-label={`Category for ${transaction.description}`}
+                                                    className="h-8 min-w-40"
+                                                    value={
+                                                        transaction.category_id ??
+                                                        ''
+                                                    }
+                                                    onChange={(event) =>
+                                                        assign(
+                                                            transaction,
+                                                            'category_id',
+                                                            event.target.value,
+                                                        )
+                                                    }
                                                 >
-                                                    {category.name}
-                                                </option>
-                                            ))}
-                                        </NativeSelect>
-                                        <SourceNote
-                                            source={transaction.category_source}
-                                        />
+                                                    <option value="">
+                                                        Uncategorized
+                                                    </option>
+                                                    {categories.map(
+                                                        (category) => (
+                                                            <option
+                                                                key={
+                                                                    category.id
+                                                                }
+                                                                value={
+                                                                    category.id
+                                                                }
+                                                            >
+                                                                {category.name}
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </NativeSelect>
+                                                <SourceNote
+                                                    source={
+                                                        transaction.category_source
+                                                    }
+                                                />
+                                            </>
+                                        )}
+                                        {transaction.suggested_transfer && (
+                                            <Link
+                                                href={transfers()}
+                                                className="mt-0.5 block text-xs text-amber-700 underline dark:text-amber-400"
+                                            >
+                                                suggested transfer
+                                            </Link>
+                                        )}
                                     </Td>
                                     <Td className="text-right text-muted-foreground">
                                         {transaction.fee !== 0 && (
@@ -250,7 +325,10 @@ export default function Transactions({
                                             signed
                                         />
                                     </Td>
-                                    <Td className="text-right">
+                                    <Td className="text-right whitespace-nowrap">
+                                        <TransferActions
+                                            transaction={transaction}
+                                        />
                                         <Button
                                             size="icon"
                                             variant="ghost"

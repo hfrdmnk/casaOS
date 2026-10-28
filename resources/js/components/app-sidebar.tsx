@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import {
+    ArrowLeftRight,
     FileUp,
     LayoutGrid,
     ListOrdered,
@@ -27,6 +28,7 @@ import { index as importPage } from '@/routes/finance/import';
 import { index as payees } from '@/routes/finance/payees';
 import { index as rules } from '@/routes/finance/rules';
 import { index as transactions } from '@/routes/finance/transactions';
+import { index as transfers } from '@/routes/finance/transfers';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -45,6 +47,7 @@ const financeNavItems: NavItem[] = [
         matchPrefix: true,
     },
     { title: 'Transactions', href: transactions(), icon: ListOrdered },
+    { title: 'Transfers', href: transfers(), icon: ArrowLeftRight },
     { title: 'Categories', href: categories(), icon: Tags },
     { title: 'Payees', href: payees(), icon: Store },
     { title: 'Rules', href: rules(), icon: WandSparkles, matchPrefix: true },

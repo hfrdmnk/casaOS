@@ -98,6 +98,10 @@ function payloadCondition(draft: ConditionDraft) {
 }
 
 function payloadAction(draft: ActionDraft) {
+    if (draft.type === 'mark_as_transfer') {
+        return { type: draft.type };
+    }
+
     if (draft.value === 'new') {
         return { type: draft.type, name: draft.name };
     }
@@ -455,31 +459,42 @@ export default function EditRule({
                                                 </option>
                                             ))}
                                         </NativeSelect>
-                                        <NativeSelect
-                                            aria-label={`Action ${n} value`}
-                                            className="w-44"
-                                            value={action.value}
-                                            onChange={(event) =>
-                                                updateAction(i, {
-                                                    value: event.target.value,
-                                                })
-                                            }
-                                        >
-                                            <option value="">Choose…</option>
-                                            {action.type === 'set_payee' && (
-                                                <option value="new">
-                                                    New payee…
+                                        {action.type === 'mark_as_transfer' ? (
+                                            <span className="w-44 text-xs text-muted-foreground">
+                                                Clears the category; pairing
+                                                looks for a counterpart.
+                                            </span>
+                                        ) : (
+                                            <NativeSelect
+                                                aria-label={`Action ${n} value`}
+                                                className="w-44"
+                                                value={action.value}
+                                                onChange={(event) =>
+                                                    updateAction(i, {
+                                                        value: event.target
+                                                            .value,
+                                                    })
+                                                }
+                                            >
+                                                <option value="">
+                                                    Choose…
                                                 </option>
-                                            )}
-                                            {choices.map((option) => (
-                                                <option
-                                                    key={option.id}
-                                                    value={option.id}
-                                                >
-                                                    {option.name}
-                                                </option>
-                                            ))}
-                                        </NativeSelect>
+                                                {action.type ===
+                                                    'set_payee' && (
+                                                    <option value="new">
+                                                        New payee…
+                                                    </option>
+                                                )}
+                                                {choices.map((option) => (
+                                                    <option
+                                                        key={option.id}
+                                                        value={option.id}
+                                                    >
+                                                        {option.name}
+                                                    </option>
+                                                ))}
+                                            </NativeSelect>
+                                        )}
                                         {action.value === 'new' && (
                                             <Input
                                                 aria-label={`Action ${n} new payee name`}

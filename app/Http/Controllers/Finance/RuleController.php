@@ -202,10 +202,14 @@ class RuleController extends Controller
             'changes' => $preview['changes'],
             'sample' => array_map(fn (array $entry): array => [
                 'transaction' => TransactionController::present($entry['transaction']->loadMissing(['category', 'payee'])),
-                'changes' => collect($entry['changes'])->map(fn (array $change, string $field): array => [
+                'changes' => collect($entry['changes'])->map(fn (array $change, string $field): array => $field === 'transfer' ? [
+                    'field' => $field,
+                    'from' => null,
+                    'to' => 'Transfer',
+                ] : [
                     'field' => $field,
                     'from' => $change['from'] === null ? null : ($names[$field][$change['from']] ?? null),
-                    'to' => $names[$field][$change['to']] ?? null,
+                    'to' => $change['to'] === null ? null : ($names[$field][$change['to']] ?? null),
                 ])->values()->all(),
             ], $preview['sample']),
             ...self::options($user),
@@ -220,9 +224,9 @@ class RuleController extends Controller
         $result = $engine->apply($user, $rule);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => trans_choice(
-            'Rules changed :count transaction (:category categories, :payee payees).|Rules changed :count transactions (:category categories, :payee payees).',
+            'Rules changed :count transaction (:category categories, :payee payees, :transfer transfers).|Rules changed :count transactions (:category categories, :payee payees, :transfer transfers).',
             $result['transactions'],
-            ['category' => $result['changes']['category'], 'payee' => $result['changes']['payee']],
+            ['category' => $result['changes']['category'], 'payee' => $result['changes']['payee'], 'transfer' => $result['changes']['transfer']],
         )]);
 
         return to_route('finance.rules.index');

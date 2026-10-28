@@ -8,6 +8,7 @@ use App\Models\Finance\RuleActionType;
 use App\Models\Finance\RuleConditionField;
 use App\Models\Finance\RuleOperator;
 use App\Models\Finance\Transaction;
+use App\Models\Finance\TransferSource;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -23,7 +24,9 @@ use Illuminate\Support\Facades\DB;
  * - Every matching enabled rule applies, in position order. A later rule overrides an earlier
  *   one for the same field, and conditions see the values earlier rules set in the same run
  *   (a `payee is` condition matches a payee an earlier rule just assigned).
- * - A field whose source is manual is never changed. Rules set values but never clear them.
+ * - A field whose source is manual is never changed. Rules set values but never clear them,
+ *   except that marking a transfer clears the category: transfers carry no category, so a
+ *   `set_category` action skips them.
  */
 final class RuleEngine
 {
@@ -39,17 +42,18 @@ final class RuleEngine
 
     /**
      * Run rules on one transaction in memory; the caller saves it. Returns the fields that
-     * changed, keyed by `category` or `payee`.
+     * changed, keyed by `category`, `payee` or `transfer` (`to` is null for a category cleared
+     * by marking a transfer; a transfer change is `0 → 1`).
      *
      * @param  iterable<Rule>  $rules  in the order they apply
-     * @return array<string, array{from: int|null, to: int}>
+     * @return array<string, array{from: int|null, to: int|null}>
      */
     public function run(Transaction $transaction, iterable $rules): array
     {
         $original = [];
 
         foreach (RuleActionType::cases() as $type) {
-            $original[$type->field()] = $transaction->getAttribute($type->column());
+            $original[$type->field()] = $this->value($transaction, $type);
         }
 
         foreach ($rules as $rule) {
@@ -60,11 +64,24 @@ final class RuleEngine
             foreach ($rule->actions as $action) {
                 $type = RuleActionType::from($action['type']);
 
-                if ($transaction->getAttribute($type->sourceColumn()) === FieldSource::Manual) {
+                if ($transaction->getAttribute($type->sourceColumn()) === ($type === RuleActionType::MarkAsTransfer ? TransferSource::Manual : FieldSource::Manual)) {
                     continue;
                 }
 
-                $transaction->setAttribute($type->column(), (int) $action['value']);
+                if ($type === RuleActionType::MarkAsTransfer) {
+                    if (! $transaction->is_transfer) {
+                        $transaction->forceFill(['is_transfer' => true, 'transfer_source' => TransferSource::Rule, 'category_id' => null, 'category_source' => null]);
+                    }
+
+                    continue;
+                }
+
+                // Transfers carry no category.
+                if ($type === RuleActionType::SetCategory && $transaction->is_transfer) {
+                    continue;
+                }
+
+                $transaction->setAttribute($type->column(), (int) ($action['value'] ?? 0));
                 $transaction->setAttribute($type->sourceColumn(), FieldSource::Rule);
             }
         }
@@ -72,10 +89,10 @@ final class RuleEngine
         $changes = [];
 
         foreach (RuleActionType::cases() as $type) {
-            $to = $transaction->getAttribute($type->column());
+            $to = $this->value($transaction, $type);
 
             if ($to !== $original[$type->field()]) {
-                $changes[$type->field()] = ['from' => $original[$type->field()], 'to' => (int) $to];
+                $changes[$type->field()] = ['from' => $original[$type->field()], 'to' => $to];
             }
         }
 
@@ -128,7 +145,7 @@ final class RuleEngine
      * With `$scope`, only the transactions that rule matches are considered, but all enabled
      * rules still run on them in order, so the outcome is the same as a full run for those rows.
      *
-     * @return array{transactions: int, changes: array<string, int>, sample: list<array{transaction: Transaction, changes: array<string, array{from: int|null, to: int}>}>}
+     * @return array{transactions: int, changes: array<string, int>, sample: list<array{transaction: Transaction, changes: array<string, array{from: int|null, to: int|null}>}>}
      */
     public function preview(User $user, ?Rule $scope = null, int $sample = 25): array
     {
@@ -178,7 +195,7 @@ final class RuleEngine
     }
 
     /**
-     * @return list<array{transaction: Transaction, changes: array<string, array{from: int|null, to: int}>}>
+     * @return list<array{transaction: Transaction, changes: array<string, array{from: int|null, to: int|null}>}>
      */
     private function plan(User $user, ?Rule $scope): array
     {
@@ -198,6 +215,20 @@ final class RuleEngine
         }
 
         return $plan;
+    }
+
+    /**
+     * The value an action owns, as an id (or 0/1 for the transfer flag), null when empty.
+     */
+    private function value(Transaction $transaction, RuleActionType $type): ?int
+    {
+        if ($type === RuleActionType::MarkAsTransfer) {
+            return $transaction->is_transfer ? 1 : 0;
+        }
+
+        $value = $transaction->getAttribute($type->column());
+
+        return $value === null ? null : (int) $value;
     }
 
     /**

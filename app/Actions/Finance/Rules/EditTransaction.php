@@ -10,6 +10,7 @@ use Illuminate\Validation\ValidationException;
 /**
  * Sets a transaction's category or payee by hand. A value set here is manual and rules never
  * overwrite it. Clearing a field (null) hands it back to the rules, which run again at once.
+ * A transfer takes no category.
  */
 final class EditTransaction
 {
@@ -17,13 +18,17 @@ final class EditTransaction
 
     /**
      * @param  array{category_id?: int|null, payee_id?: int|null}  $fields  only the given keys change
-     * @return array<string, array{from: int|null, to: int}> what the rules set after a clear
+     * @return array<string, array{from: int|null, to: int|null}> what the rules set after a clear
      */
     public function __invoke(Transaction $transaction, array $fields): array
     {
         $cleared = false;
 
-        foreach (RuleActionType::cases() as $type) {
+        if (($fields['category_id'] ?? null) !== null && $transaction->is_transfer) {
+            throw ValidationException::withMessages(['category_id' => 'Transfers have no category. Unmark the transfer first.']);
+        }
+
+        foreach (RuleActionType::valued() as $type) {
             if (! array_key_exists($type->column(), $fields)) {
                 continue;
             }

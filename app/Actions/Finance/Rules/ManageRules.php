@@ -28,6 +28,8 @@ use Illuminate\Validation\ValidationException;
  *         'actions' => [['type' => 'set_category', 'value' => 12], ['type' => 'set_payee', 'value' => 3]],
  *     ]
  *
+ * A `mark_as_transfer` action takes no value: `['type' => 'mark_as_transfer']`.
+ *
  * A `set_payee` action may give `name` instead of `value`: the user's payee with that name, created
  * when missing, is used.
  */
@@ -106,7 +108,7 @@ final class ManageRules
         $type = $kind === 'category' ? RuleActionType::SetCategory : RuleActionType::SetPayee;
 
         Rule::query()->ownedBy($user)->get()->filter(fn (Rule $rule): bool => $rule->references($kind, $id))->each(function (Rule $rule) use ($type, $id): void {
-            $actions = array_values(array_filter($rule->actions, fn (array $action): bool => ! ($action['type'] === $type->value && (int) $action['value'] === $id)));
+            $actions = array_values(array_filter($rule->actions, fn (array $action): bool => ! ($action['type'] === $type->value && (int) ($action['value'] ?? 0) === $id)));
             $deadCondition = collect($rule->conditions)->contains(fn (array $condition): bool => $condition['field'] === RuleConditionField::Payee->value && (int) $condition['value'] === $id);
 
             $rule->update([
@@ -122,7 +124,7 @@ final class ManageRules
     public function replacePayee(User $user, int $from, int $to): void
     {
         Rule::query()->ownedBy($user)->get()->filter(fn (Rule $rule): bool => $rule->references('payee', $from))->each(function (Rule $rule) use ($from, $to): void {
-            $swap = fn (array $item, string $key, string $match): array => $item[$key] === $match && (int) $item['value'] === $from ? [...$item, 'value' => $to] : $item;
+            $swap = fn (array $item, string $key, string $match): array => $item[$key] === $match && (int) ($item['value'] ?? 0) === $from ? [...$item, 'value' => $to] : $item;
 
             $rule->update([
                 'conditions' => array_map(fn (array $condition): array => $swap($condition, 'field', RuleConditionField::Payee->value), $rule->conditions),
@@ -194,6 +196,10 @@ final class ManageRules
             foreach ($withActions ? $input['actions'] : [] as $index => $action) {
                 $type = RuleActionType::from($action['type']);
 
+                if ($type === RuleActionType::MarkAsTransfer) {
+                    continue;
+                }
+
                 if (($action['value'] ?? null) === null) {
                     if ($type !== RuleActionType::SetPayee || trim((string) ($action['name'] ?? '')) === '') {
                         $validator->errors()->add("actions.{$index}.value", 'Choose a value.');
@@ -218,9 +224,11 @@ final class ManageRules
                 'operator' => $condition['operator'],
                 'value' => $this->normalizeValue(RuleConditionField::from($condition['field']), RuleOperator::from($condition['operator']), $condition['value']),
             ], $input['conditions'])),
-            'actions' => $withActions ? array_values(array_map(fn (array $action): array => ($action['value'] ?? null) === null
-                ? ['type' => $action['type'], 'name' => trim((string) $action['name'])]
-                : ['type' => $action['type'], 'value' => (int) $action['value']], $input['actions'])) : [],
+            'actions' => $withActions ? array_values(array_map(fn (array $action): array => match (true) {
+                $action['type'] === RuleActionType::MarkAsTransfer->value => ['type' => $action['type']],
+                ($action['value'] ?? null) === null => ['type' => $action['type'], 'name' => trim((string) $action['name'])],
+                default => ['type' => $action['type'], 'value' => (int) $action['value']],
+            }, $input['actions'])) : [],
         ];
     }
 
@@ -228,13 +236,17 @@ final class ManageRules
      * Turn `set_payee` actions given by name into payee ids, creating missing payees.
      *
      * @param  list<array{type: string, value?: int, name?: string}>  $actions
-     * @return list<array{type: string, value: int}>
+     * @return list<array{type: string, value?: int}>
      */
     private function resolveActions(User $user, array $actions): array
     {
         return array_map(function (array $action) use ($user): array {
             if (isset($action['value'])) {
                 return ['type' => $action['type'], 'value' => $action['value']];
+            }
+
+            if ($action['type'] === RuleActionType::MarkAsTransfer->value) {
+                return ['type' => $action['type']];
             }
 
             $payee = Payee::query()->ownedBy($user)->where('name', $action['name'] ?? '')->first();

@@ -42,7 +42,7 @@ class FinanceRules implements ScenarioState
         return [
             ...$values,
             'rule_id' => $rule->id,
-            'payee_id' => $rule->actions[1]['value'],
+            'payee_id' => $rule->actions[1]['value'] ?? null,
             'applied' => $this->engine->apply($user),
         ];
     }

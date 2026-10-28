@@ -2,6 +2,7 @@
 
 namespace App\Actions\Finance\Import;
 
+use App\Actions\Finance\Transfers\ManageTransfers;
 use App\Models\Finance\BalanceSnapshot;
 use App\Models\Finance\Category;
 use App\Models\Finance\FieldSource;
@@ -10,6 +11,8 @@ use App\Models\Finance\ImportBatchChange;
 use App\Models\Finance\Payee;
 use App\Models\Finance\RuleActionType;
 use App\Models\Finance\Transaction;
+use App\Models\Finance\TransferSource;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -17,6 +20,11 @@ use Illuminate\Support\Facades\DB;
  * transactions and snapshots are deleted, updated ones get their imported fields back, and
  * transactions removed as reverted are restored. A category or payee the import's rules set on an
  * updated transaction is restored too, unless it has been set by hand since.
+ *
+ * Transfer pairs go first: every pair that involves a transaction the batch created, or one it
+ * completed in place (which goes back to pending), is broken. The surviving side falls back to a
+ * plain transaction when pairing made it a transfer (and gets back the category pairing cleared),
+ * or stays a transfer without a counterpart when a rule or the user marked it.
  */
 final class UndoImportBatch
 {
@@ -28,7 +36,9 @@ final class UndoImportBatch
     /**
      * The fields rules may change when an import updates a transaction.
      */
-    public const RULE_TRANSACTION_FIELDS = ['category_id', 'category_source', 'payee_id', 'payee_source'];
+    public const RULE_TRANSACTION_FIELDS = ['category_id', 'category_source', 'payee_id', 'payee_source', 'is_transfer', 'transfer_source', 'transfer_counterpart_id'];
+
+    public function __construct(private ManageTransfers $transfers) {}
 
     /**
      * Batches are undone newest first per account: a batch that a later, still active batch built
@@ -48,7 +58,10 @@ final class UndoImportBatch
     public function __invoke(ImportBatch $batch): void
     {
         DB::transaction(function () use ($batch): void {
-            $batch->changes()->orderByDesc('id')->get()->each(fn (ImportBatchChange $change) => match ($change->subject_type) {
+            $changes = $batch->changes()->orderByDesc('id')->get();
+            $this->breakPairs($changes);
+
+            $changes->each(fn (ImportBatchChange $change) => match ($change->subject_type) {
                 'transaction' => $this->revertTransaction($change),
                 default => $this->revertSnapshot($change),
             });
@@ -58,6 +71,25 @@ final class UndoImportBatch
         });
     }
 
+    /**
+     * Break the pairs of transactions the batch created, and the pairs a completed-in-place
+     * transaction got that were not made by hand.
+     *
+     * @param  Collection<int, ImportBatchChange>  $changes
+     */
+    private function breakPairs(Collection $changes): void
+    {
+        $created = $changes->where('subject_type', 'transaction')->where('action', 'created')->pluck('subject_id');
+        $updated = $changes->where('subject_type', 'transaction')->where('action', 'updated')->pluck('subject_id');
+
+        Transaction::query()->whereIn('id', $created)->whereNotNull('transfer_counterpart_id')->get()
+            ->each(fn (Transaction $transaction) => $this->transfers->detach($transaction));
+
+        Transaction::query()->whereIn('id', $updated)->whereNotNull('transfer_counterpart_id')
+            ->where('transfer_source', '!=', TransferSource::Manual)->get()
+            ->each(fn (Transaction $transaction) => $this->transfers->detach($transaction));
+    }
+
     private function revertTransaction(ImportBatchChange $change): void
     {
         $before = (array) $change->before;
@@ -65,12 +97,46 @@ final class UndoImportBatch
         match ($change->action) {
             'created' => Transaction::query()->whereKey($change->subject_id)->delete(),
             'updated' => Transaction::query()->whereKey($change->subject_id)->update($this->updatedFields($change->subject_id, $before)),
+            'paired' => $this->revertPaired($change->subject_id, $before),
             default => Transaction::query()->insert([
                 ...$before,
                 ...$this->existingReference($before, 'category_id', 'category_source', Category::class),
                 ...$this->existingReference($before, 'payee_id', 'payee_source', Payee::class),
+                ...$this->unpaired($before),
             ]),
         };
+    }
+
+    /**
+     * A transaction that existed before the batch and was paired by it. Once its pair is broken
+     * and it is a plain transaction again, it gets back the category pairing cleared.
+     *
+     * @param  array<string, mixed>  $before
+     */
+    private function revertPaired(int $id, array $before): void
+    {
+        $current = Transaction::query()->find($id);
+
+        if ($current === null || $current->is_transfer || $current->category_id !== null) {
+            return;
+        }
+
+        $current->forceFill($this->existingReference($before, 'category_id', 'category_source', Category::class))->save();
+    }
+
+    /**
+     * A removed transaction comes back without its counterpart, which lost the pair when it was
+     * removed; a transfer only pairing had made is a plain transaction again.
+     *
+     * @param  array<string, mixed>  $before
+     * @return array<string, mixed>
+     */
+    private function unpaired(array $before): array
+    {
+        return [
+            'transfer_counterpart_id' => null,
+            ...(($before['transfer_source'] ?? null) === TransferSource::Auto->value ? ['is_transfer' => false, 'transfer_source' => null] : []),
+        ];
     }
 
     /**
@@ -86,10 +152,18 @@ final class UndoImportBatch
             return $fields;
         }
 
-        foreach (RuleActionType::cases() as $type) {
+        foreach (RuleActionType::valued() as $type) {
             if ($current->getAttribute($type->sourceColumn()) !== FieldSource::Manual) {
                 $fields += $this->existingReference($before, $type->column(), $type->sourceColumn(), $type->model());
             }
+        }
+
+        if (array_key_exists('is_transfer', $before) && $current->transfer_source !== TransferSource::Manual) {
+            $fields += [
+                'is_transfer' => $before['is_transfer'],
+                'transfer_source' => $before['transfer_source'],
+                'transfer_counterpart_id' => null,
+            ];
         }
 
         return $fields;

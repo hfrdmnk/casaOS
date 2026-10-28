@@ -148,13 +148,13 @@ test('the dry run reports the changes without writing and apply writes them', fu
     $this->get(route('finance.rules.review', $rule))->assertInertia(fn ($page) => $page
         ->component('finance/rules/apply')
         ->where('transactions', 2)
-        ->where('changes', ['category' => 2, 'payee' => 0])
-        ->where('sample', fn ($sample) => collect($sample)->mapWithKeys(fn ($entry) => [$entry['transaction']['description'] => $entry['changes'][0]])->all() === [
+        ->where('changes', ['category' => 2, 'payee' => 0, 'transfer' => 0])
+        ->where('sample', fn ($sample) => collect($sample)->mapWithKeys(fn ($entry) => [$entry['transaction']['description'] => $entry['changes'][0]])->sortKeys()->all() === [
             'Coop' => ['field' => 'category', 'from' => null, 'to' => 'Groceries'],
             'Migros' => ['field' => 'category', 'from' => 'Shopping', 'to' => 'Groceries'],
         ]));
 
-    $this->get(route('finance.rules.review-all'))->assertInertia(fn ($page) => $page->where('transactions', 3)->where('changes', ['category' => 2, 'payee' => 1]));
+    $this->get(route('finance.rules.review-all'))->assertInertia(fn ($page) => $page->where('transactions', 3)->where('changes', ['category' => 2, 'payee' => 1, 'transfer' => 0]));
 
     expect($migros->refresh()->category?->name)->toBe('Shopping')
         ->and($coop->refresh()->category_id)->toBeNull();
@@ -165,7 +165,7 @@ test('the dry run reports the changes without writing and apply writes them', fu
         ->and($coop->refresh()->category?->name)->toBe('Groceries')
         ->and(Transaction::query()->whereNotNull('payee_id')->count())->toBe(0);
 
-    $this->get(route('finance.rules.review-all'))->assertInertia(fn ($page) => $page->where('transactions', 1)->where('changes', ['category' => 0, 'payee' => 1]));
+    $this->get(route('finance.rules.review-all'))->assertInertia(fn ($page) => $page->where('transactions', 1)->where('changes', ['category' => 0, 'payee' => 1, 'transfer' => 0]));
 });
 
 test('invalid rules are rejected', function (array $input, string $error) {

@@ -8,6 +8,7 @@ use App\Models\Finance\ImportMapping;
 use App\Models\Finance\Payee;
 use App\Models\Finance\Rule;
 use App\Models\Finance\Transaction;
+use App\Models\Finance\TransferSuggestion;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -25,6 +26,11 @@ test('another user gets 404 on every finance row', function (string $method, str
         'payee' => Payee::factory()->for($owner)->create(),
         'rule' => Rule::factory()->for($owner)->create(),
     ];
+    $rows['suggestion'] = TransferSuggestion::query()->forceCreate([
+        'user_id' => $owner->id,
+        'outflow_id' => Transaction::factory()->for($account)->create(['amount' => -500])->id,
+        'inflow_id' => Transaction::factory()->for(Account::factory()->for($owner))->create(['amount' => 500])->id,
+    ]);
 
     $this->actingAs(User::factory()->create())
         ->json($method, route($route, $rows[$model]))
@@ -54,7 +60,35 @@ test('another user gets 404 on every finance row', function (string $method, str
     'delete rule' => ['DELETE', 'finance.rules.destroy', 'rule'],
     'review rule' => ['GET', 'finance.rules.review', 'rule'],
     'apply rule' => ['POST', 'finance.rules.apply', 'rule'],
+    'transfer candidates' => ['GET', 'finance.transactions.transfer-candidates', 'transaction'],
+    'pair transaction' => ['POST', 'finance.transactions.pair', 'transaction'],
+    'unpair transaction' => ['DELETE', 'finance.transactions.unpair', 'transaction'],
+    'mark transfer' => ['POST', 'finance.transactions.mark-transfer', 'transaction'],
+    'unmark transfer' => ['DELETE', 'finance.transactions.unmark-transfer', 'transaction'],
+    'confirm suggestion' => ['POST', 'finance.transfers.confirm', 'suggestion'],
+    'dismiss suggestion' => ['POST', 'finance.transfers.dismiss', 'suggestion'],
 ]);
+
+test('a transaction cannot be paired with another user\'s, and suggestions stay private', function () {
+    $owner = User::factory()->create();
+    $theirs = Transaction::factory()->for(Account::factory()->for($owner))->create(['amount' => 500]);
+    TransferSuggestion::query()->forceCreate([
+        'user_id' => $owner->id,
+        'outflow_id' => Transaction::factory()->for(Account::factory()->for($owner))->create(['amount' => -500])->id,
+        'inflow_id' => $theirs->id,
+    ]);
+
+    $user = User::factory()->create();
+    $mine = Transaction::factory()->for(Account::factory()->for($user))->create(['amount' => -500]);
+
+    $this->actingAs($user)->post(route('finance.transactions.pair', $mine), ['counterpart_id' => $theirs->id])->assertNotFound();
+
+    expect($mine->refresh()->is_transfer)->toBeFalse()
+        ->and($theirs->refresh()->is_transfer)->toBeFalse();
+
+    $this->get(route('finance.transfers.index'))->assertInertia(fn ($page) => $page->has('suggestions', 0));
+    $this->get(route('finance.transactions.transfer-candidates', $mine))->assertJsonCount(0, 'candidates');
+});
 
 test('lists of payees and rules only show the user\'s own', function () {
     $user = User::factory()->create();

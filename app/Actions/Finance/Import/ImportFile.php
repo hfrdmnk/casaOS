@@ -3,6 +3,8 @@
 namespace App\Actions\Finance\Import;
 
 use App\Actions\Finance\Rules\RuleEngine;
+use App\Actions\Finance\Transfers\ManageTransfers;
+use App\Actions\Finance\Transfers\PairTransfers;
 use App\Models\Finance\AccountType;
 use App\Models\Finance\BalanceSnapshot;
 use App\Models\Finance\ImportBatch;
@@ -26,7 +28,8 @@ use Illuminate\Support\Facades\DB;
  * reverted row removes the transaction it matches.
  *
  * The user's rules run on every created transaction, and on every transaction updated in place
- * for the fields they still own (a category or payee set by hand stays).
+ * for the fields they still own (a category or payee set by hand stays). Transfer pairing runs
+ * after the rules, on the rows the import created or completed.
  */
 final class ImportFile
 {
@@ -42,7 +45,14 @@ final class ImportFile
      */
     private int $ruled = 0;
 
-    public function __construct(private RuleEngine $engine) {}
+    /**
+     * Ids of the transactions this import created or updated.
+     *
+     * @var list<int>
+     */
+    private array $touched = [];
+
+    public function __construct(private RuleEngine $engine, private PairTransfers $pairing, private ManageTransfers $transfers) {}
 
     /**
      * Saved mappings of active accounts whose shape matches the file exactly.
@@ -123,6 +133,7 @@ final class ImportFile
 
         $this->rules = $this->engine->rulesFor($user);
         $this->ruled = 0;
+        $this->touched = [];
 
         return DB::transaction(function () use ($user, $filename, $first, $mappings, $parsed, $unmapped): ImportBatch {
             $batch = new ImportBatch(['filename' => $filename, 'signature' => $first->signature, 'summary' => []]);
@@ -144,6 +155,8 @@ final class ImportFile
                 }
             }
 
+            $transfers = ($this->pairing)($user, $this->touched, $batch);
+
             $batch->summary = [
                 'created' => $counts['created'],
                 'updated' => $counts['updated'],
@@ -153,6 +166,8 @@ final class ImportFile
                 'skipped_reverted' => $counts['skipped_reverted'],
                 'unmapped_rows' => $unmapped,
                 'categorized_by_rules' => $this->ruled,
+                'paired_as_transfers' => $transfers['paired'],
+                'transfer_suggestions' => $transfers['suggested'],
                 'accounts' => $accounts,
                 'currency_rows' => $currencyRows,
             ];
@@ -292,6 +307,7 @@ final class ImportFile
         $transaction->user_id = $batch->user_id;
         $this->runRules($transaction);
         $transaction->save();
+        $this->touched[] = $transaction->id;
 
         $batch->changes()->create(['subject_type' => 'transaction', 'subject_id' => $transaction->id, 'action' => 'created']);
     }
@@ -314,6 +330,7 @@ final class ImportFile
         ]);
         $this->runRules($transaction);
         $transaction->save();
+        $this->touched[] = $transaction->id;
     }
 
     private function runRules(Transaction $transaction): void
@@ -332,6 +349,7 @@ final class ImportFile
             'before' => $transaction->getAttributes(),
         ]);
 
+        $this->transfers->detach($transaction);
         $transaction->delete();
     }
 

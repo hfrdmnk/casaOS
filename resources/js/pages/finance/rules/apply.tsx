@@ -8,7 +8,11 @@ import { Button } from '@/components/ui/button';
 import { index } from '@/routes/finance/rules';
 import type { Rule, TransactionRow } from '@/types/finance';
 
-type Change = { field: 'category' | 'payee'; from: string | null; to: string };
+type Change = {
+    field: 'category' | 'payee' | 'transfer';
+    from: string | null;
+    to: string | null;
+};
 
 export default function ApplyRules({
     rule,
@@ -18,7 +22,7 @@ export default function ApplyRules({
 }: {
     rule: Rule | null;
     transactions: number;
-    changes: { category: number; payee: number };
+    changes: { category: number; payee: number; transfer: number };
     sample: { transaction: TransactionRow; changes: Change[] }[];
 }) {
     const [processing, setProcessing] = useState(false);
@@ -53,7 +57,7 @@ export default function ApplyRules({
                 />
 
                 <dl
-                    className="grid gap-4 sm:grid-cols-3"
+                    className="grid gap-4 sm:grid-cols-4"
                     data-test="apply-counts"
                 >
                     {(
@@ -61,6 +65,7 @@ export default function ApplyRules({
                             ['Transactions to change', transactions],
                             ['Category changes', changes.category],
                             ['Payee changes', changes.payee],
+                            ['Marked as transfers', changes.transfer],
                         ] as const
                     ).map(([label, value]) => (
                         <div key={label} className="rounded-xl border p-4">
@@ -133,7 +138,7 @@ export default function ApplyRules({
                                                         </span>{' '}
                                                         {change.from ?? '—'} →{' '}
                                                         <span className="font-medium">
-                                                            {change.to}
+                                                            {change.to ?? '—'}
                                                         </span>
                                                     </li>
                                                 ))}
