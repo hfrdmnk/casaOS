@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Models\Finance;
+
+use App\Models\Concerns\BelongsToUser;
+use Database\Factories\Finance\TransactionFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
+
+/**
+ * Money is signed Rappen. `amount` is the net effect on the account balance (the file's amount
+ * minus its fee); `fee` keeps the fee itself as a positive number.
+ *
+ * @property int $id
+ * @property int $user_id
+ * @property int $account_id
+ * @property int|null $category_id
+ * @property int|null $import_batch_id
+ * @property string $date Y-m-d
+ * @property string|null $time
+ * @property string $description
+ * @property int $amount
+ * @property int $fee
+ * @property int|null $balance_after
+ * @property string $currency
+ * @property TransactionStatus $status
+ * @property string|null $fingerprint
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Account $account
+ * @property-read Category|null $category
+ */
+#[Fillable(['account_id', 'category_id', 'import_batch_id', 'date', 'time', 'description', 'amount', 'fee', 'balance_after', 'currency', 'status', 'fingerprint'])]
+class Transaction extends Model
+{
+    /** @use HasFactory<TransactionFactory> */
+    use BelongsToUser, HasFactory;
+
+    /**
+     * @return BelongsTo<Account, $this>
+     */
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(Account::class);
+    }
+
+    /**
+     * @return BelongsTo<Category, $this>
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * @return BelongsTo<ImportBatch, $this>
+     */
+    public function importBatch(): BelongsTo
+    {
+        return $this->belongsTo(ImportBatch::class);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'amount' => 'integer',
+            'fee' => 'integer',
+            'balance_after' => 'integer',
+            'status' => TransactionStatus::class,
+        ];
+    }
+}

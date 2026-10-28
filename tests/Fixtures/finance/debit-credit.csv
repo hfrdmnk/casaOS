@@ -1,0 +1,9 @@
+Kontoauszug;Privatkonto
+IBAN;CH00 0000 0000 0000 0000 0
+Zeitraum;01.10.2026 - 31.10.2026
+
+Buchungsdatum;Buchungstext;Belastung;Gutschrift;Währung;Saldo
+01.10.2026;Lohn Oktober;;5'200,00;CHF;6'200,00
+02.10.2026;Miete;1'850,00;;CHF;4'350,00
+03.10.2026;Hotel Wien;120,00;;EUR;
+04.10.2026;Coop;"64,35";;CHF;4'285,65

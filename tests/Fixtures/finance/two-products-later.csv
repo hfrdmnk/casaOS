@@ -1,0 +1,8 @@
+﻿Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance
+Card Payment,Current,2026-09-03 10:00:00,2026-09-03 10:00:00,Coffee Bar,-3.50,0.00,CHF,COMPLETED,170.00
+Card Payment,Current,2026-09-03 10:00:00,2026-09-03 10:00:00,Coffee Bar,-3.50,0.00,CHF,COMPLETED,166.50
+Transfer,Savings,2026-09-04 18:00:00,2026-09-04 18:00:00,Pocket Withdrawal,-50.00,0.00,CHF,COMPLETED,450.30
+Card Payment,Current,2026-09-05 13:00:00,2026-09-06 07:00:00,Kiosk,-5.00,0.05,CHF,COMPLETED,161.45
+Card Payment,Current,2026-09-05 14:00:00,,Train ticket,-22.20,0.00,CHF,REVERTED,
+Card Payment,Current,2026-09-06 09:00:00,2026-09-06 09:00:00,Lunch,-18.45,0.00,CHF,COMPLETED,143.00
+Transfer,Savings,2026-09-06 18:00:00,2026-09-06 18:00:00,To pocket Rainy Day 🌧️ from CHF,1.00,0.00,CHF,COMPLETED,451.30

@@ -1,0 +1,4 @@
+Date,Description,Amount
+2026-10-01,Good row,10.00
+2026-13-45,Bad date,5.00
+2026-10-03,Bad amount,abc

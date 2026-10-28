@@ -8,7 +8,7 @@ What casaOS does today, how a user reaches each feature, and what proves it work
 - A fresh scenario exists for this run (`php artisan verify:scenario [states] > "$RUN/scenario.json"`, `ID=$(jq -r .scenario "$RUN/scenario.json")`).
 - Base URL is `APP_URL` (`http://localhost:8000` in an orb). The browser uses a named `agent-browser` session.
 - Evidence goes to `storage/verify/runs/<YYYY-MM-DD>-<slug>/` (`$RUN`).
-- casaOS is single-user: there is no tenant model. Each feature proves its own guest/other-user denial.
+- casaOS is single-user: there is no tenant model. Each feature proves its own guest/other-user denial. Finance rows belong to one user; another user gets 404, never 403.
 
 ## Features
 
@@ -20,6 +20,9 @@ App UI (logged in):
 - [Password update](./settings-password.md): `/settings/security` Update password form, behind password confirmation.
 - [Two-factor authentication](./two-factor.md): `/settings/security` enable/confirm/disable, recovery codes, `/two-factor-challenge`.
 - [Appearance](./settings-appearance.md): `/settings/appearance` Light/Dark/System.
+- [Finance: accounts and balances](./finance-accounts.md): `/finance/accounts`, snapshots and their differences, archive.
+- [Finance: transactions and categories](./finance-transactions.md): `/finance/transactions` filters and categorizing, `/finance/categories`.
+- [Finance: CSV import](./finance-import.md): `/finance/import` mapper wizard, saved mappings, de-dup, pending/reverted, batches and undo.
 
 Public pages and email:
 

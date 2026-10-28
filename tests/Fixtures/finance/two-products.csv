@@ -1,0 +1,11 @@
+﻿Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance
+Transfer,Savings,2026-09-01 06:00:00,2026-09-01 06:00:00,To pocket Rainy Day 🌧️ from CHF,0.30,0.00,CHF,COMPLETED,500.30
+Topup,Current,2026-09-01 08:00:00,2026-09-01 08:00:00,Top-up by card,200.00,0.00,CHF,COMPLETED,200.00
+Card Payment,Current,2026-09-02 12:00:00,2026-09-02 12:00:00,Bäckerei 🥐,-6.40,0.00,CHF,COMPLETED,193.60
+Card Payment,Current,2026-09-03 09:00:00,2026-09-03 09:00:00,Shop Abroad,-20.00,0.10,CHF,COMPLETED,173.50
+Card Payment,Current,2026-09-03 10:00:00,2026-09-03 10:00:00,Coffee Bar,-3.50,0.00,CHF,COMPLETED,170.00
+Card Payment,Current,2026-09-03 10:00:00,2026-09-03 10:00:00,Coffee Bar,-3.50,0.00,CHF,COMPLETED,166.50
+Card Payment,Current,2026-09-04 11:00:00,,Cancelled Order,-31.05,0.00,CHF,REVERTED,
+Transfer,Savings,2026-09-04 18:00:00,2026-09-04 18:00:00,Pocket Withdrawal,-50.00,0.00,CHF,COMPLETED,450.30
+Card Payment,Current,2026-09-05 13:00:00,,Kiosk,-4.95,0.00,CHF,PENDING,
+Card Payment,Current,2026-09-05 14:00:00,,Train ticket,-22.20,0.00,CHF,PENDING,

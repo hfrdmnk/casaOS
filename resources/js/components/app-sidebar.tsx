@@ -1,5 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { LayoutGrid } from 'lucide-react';
+import {
+    FileUp,
+    LayoutGrid,
+    ListOrdered,
+    Tags,
+    WalletCards,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -13,6 +19,10 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as accounts } from '@/routes/finance/accounts';
+import { index as categories } from '@/routes/finance/categories';
+import { index as importPage } from '@/routes/finance/import';
+import { index as transactions } from '@/routes/finance/transactions';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -21,6 +31,18 @@ const mainNavItems: NavItem[] = [
         href: dashboard(),
         icon: LayoutGrid,
     },
+];
+
+const financeNavItems: NavItem[] = [
+    {
+        title: 'Accounts',
+        href: accounts(),
+        icon: WalletCards,
+        matchPrefix: true,
+    },
+    { title: 'Transactions', href: transactions(), icon: ListOrdered },
+    { title: 'Categories', href: categories(), icon: Tags },
+    { title: 'Import', href: importPage(), icon: FileUp, matchPrefix: true },
 ];
 
 export function AppSidebar() {
@@ -40,6 +62,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                <NavMain items={financeNavItems} label="Finance" />
             </SidebarContent>
 
             <SidebarFooter>

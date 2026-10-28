@@ -136,3 +136,19 @@ test('doctor fails when mail could reach a real inbox and does not print the mai
         ->doesntExpectOutputToContain('postmarkapp')
         ->assertFailed();
 });
+
+test('a finance-imported scenario is readable by inspect and cleanup removes its finance rows', function () {
+    $scenario = verifyJson('verify:scenario', ['states' => ['finance-imported']]);
+
+    $finance = verifyJson('verify:inspect', ['scenario' => $scenario['scenario'], '--only' => ['finance']])['finance'];
+
+    expect($finance['accounts'][0])->toMatchArray(['name' => 'Verify Checking', 'balance_today' => '2934.60', 'transactions' => ['completed' => 3, 'pending' => 1]])
+        ->and($finance['batches'][0])->toMatchArray(['created' => 4, 'undone' => false])
+        ->and($finance['categories'])->toHaveCount(12);
+
+    verifyJson('verify:cleanup', ['scenario' => $scenario['scenario']]);
+
+    expect(DB::table('transactions')->count())->toBe(0)
+        ->and(DB::table('accounts')->count())->toBe(0)
+        ->and(DB::table('import_batches')->count())->toBe(0);
+});
