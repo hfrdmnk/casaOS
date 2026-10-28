@@ -3,8 +3,10 @@ import {
     FileUp,
     LayoutGrid,
     ListOrdered,
+    Store,
     Tags,
     WalletCards,
+    WandSparkles,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -22,6 +24,8 @@ import { dashboard } from '@/routes';
 import { index as accounts } from '@/routes/finance/accounts';
 import { index as categories } from '@/routes/finance/categories';
 import { index as importPage } from '@/routes/finance/import';
+import { index as payees } from '@/routes/finance/payees';
+import { index as rules } from '@/routes/finance/rules';
 import { index as transactions } from '@/routes/finance/transactions';
 import type { NavItem } from '@/types';
 
@@ -42,6 +46,8 @@ const financeNavItems: NavItem[] = [
     },
     { title: 'Transactions', href: transactions(), icon: ListOrdered },
     { title: 'Categories', href: categories(), icon: Tags },
+    { title: 'Payees', href: payees(), icon: Store },
+    { title: 'Rules', href: rules(), icon: WandSparkles, matchPrefix: true },
     { title: 'Import', href: importPage(), icon: FileUp, matchPrefix: true },
 ];
 

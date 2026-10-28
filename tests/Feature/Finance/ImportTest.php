@@ -3,8 +3,10 @@
 use App\Models\Finance\Account;
 use App\Models\Finance\AccountType;
 use App\Models\Finance\BalanceSnapshot;
+use App\Models\Finance\FieldSource;
 use App\Models\Finance\ImportBatch;
 use App\Models\Finance\ImportMapping;
+use App\Models\Finance\Rule;
 use App\Models\Finance\Transaction;
 use App\Models\Finance\TransactionStatus;
 use App\Models\User;
@@ -274,4 +276,60 @@ test('editing a mapping keeps it matching the file shape', function () {
 
     expect($mapping->refresh()->name)->toBe('Renamed')
         ->and($account->transactions()->orderBy('date')->pluck('amount')->all())->toBe([-100000, 8000, 50000]);
+});
+
+test('rules categorize created rows and rule-owned fields of rows completed in place, and undo restores them', function (bool $setByHand) {
+    $dining = $this->user->categories()->where('name', 'Dining')->sole();
+    $shopping = $this->user->categories()->where('name', 'Shopping')->sole();
+    $groceries = $this->user->categories()->where('name', 'Groceries')->sole();
+    $this->post(route('finance.rules.store'), [
+        'conditions' => [['field' => 'description', 'operator' => 'contains', 'value' => 'kiosk']],
+        'actions' => [['type' => 'set_category', 'value' => $dining->id], ['type' => 'set_payee', 'name' => 'Kiosk']],
+    ])->assertSessionHasNoErrors();
+    $rule = Rule::query()->sole();
+
+    $first = importTwoProducts($this->user)['batch'];
+    $kiosk = Transaction::query()->where('description', 'Kiosk')->sole();
+
+    expect($first->summary['categorized_by_rules'])->toBe(1)
+        ->and($kiosk)->category_id->toBe($dining->id)->category_source->toBe(FieldSource::Rule)
+        ->and($kiosk->payee?->name)->toBe('Kiosk');
+
+    if ($setByHand) {
+        $this->patch(route('finance.transactions.update', $kiosk), ['category_id' => $groceries->id]);
+    }
+
+    $this->put(route('finance.rules.update', $rule), [
+        'conditions' => $rule->conditions,
+        'actions' => [['type' => 'set_category', 'value' => $shopping->id], $rule->actions[1]],
+    ])->assertSessionHasNoErrors();
+
+    $this->post(route('finance.import.store'), ['file' => financeFixture('two-products-later.csv')]);
+    $later = ImportBatch::query()->latest('id')->firstOrFail();
+
+    expect($kiosk->refresh())
+        ->status->toBe(TransactionStatus::Completed)
+        ->category_id->toBe($setByHand ? $groceries->id : $shopping->id)
+        ->and(Transaction::query()->where('description', 'Lunch')->sole()->category_id)->toBeNull();
+
+    $this->post(route('finance.batches.undo', $later));
+
+    expect($kiosk->refresh())
+        ->status->toBe(TransactionStatus::Pending)
+        ->category_id->toBe($setByHand ? $groceries->id : $dining->id)
+        ->category_source->toBe($setByHand ? FieldSource::Manual : FieldSource::Rule);
+})->with(['rule-owned' => false, 'set by hand' => true]);
+
+test('undo restores a reverted row with its payee', function () {
+    importTwoProducts($this->user);
+    $train = Transaction::query()->where('description', 'Train ticket')->sole();
+    $payee = $this->user->payees()->create(['name' => 'SBB']);
+    $this->patch(route('finance.transactions.update', $train), ['payee_id' => $payee->id]);
+
+    $this->post(route('finance.import.store'), ['file' => financeFixture('two-products-later.csv')]);
+    expect(Transaction::query()->whereKey($train->id)->exists())->toBeFalse();
+
+    $this->post(route('finance.batches.undo', ImportBatch::query()->latest('id')->firstOrFail()));
+
+    expect($train->refresh())->payee_id->toBe($payee->id)->payee_source->toBe(FieldSource::Manual);
 });

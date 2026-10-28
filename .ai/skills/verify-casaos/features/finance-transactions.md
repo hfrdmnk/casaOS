@@ -1,6 +1,6 @@
 # Finance: transactions and categories
 
-The transaction list at Finance → Transactions shows every transaction newest first, with filters (search, account, category or uncategorized, date range), pagination (50 per page) and a category select per row. Categories (Finance → Categories) are a flat per-user list seeded with 12 defaults; they can be added, renamed and deleted (transactions become uncategorized).
+The transaction list at Finance → Transactions shows every transaction newest first, with filters (search in the description or payee, account, category or uncategorized, date range), pagination (50 per page), and a payee and a category select per row (see [finance-payees](./finance-payees.md) and [finance-rules](./finance-rules.md)). Categories (Finance → Categories) are a flat per-user list seeded with 12 defaults; they can be added, renamed and deleted (transactions become uncategorized).
 
 Help article: none
 

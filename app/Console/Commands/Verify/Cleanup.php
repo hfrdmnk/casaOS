@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands\Verify;
 
+use App\Actions\Finance\Import\ImportUpload;
 use App\Models\User;
 use App\Verification\Scenario;
 use Illuminate\Console\Attributes\Description;
@@ -10,13 +11,15 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 
 #[Signature('verify:cleanup {scenario? : Scenario id to delete} {--stale : Delete every scenario user older than --hours, and orphaned mailboxes} {--hours=2 : Age threshold for --stale} {--dry-run : Print what would be deleted and delete nothing}')]
-#[Description('Delete scenario users, their sessions, reset tokens and captured mail; never evidence')]
+#[Description('Delete scenario users, their sessions, reset tokens, captured mail and uploads; never evidence')]
 #[Help(<<<'HELP'
 Deletes only users whose email is verify-<id>@casaos.test. Removes the user (passkeys and other
-user-owned rows cascade), their sessions and password reset tokens, and the captured mail under
-storage/verify/mail/<id>/. Evidence under storage/verify/runs/ is never touched.
+user-owned rows cascade), their sessions and password reset tokens, the captured mail under
+storage/verify/mail/<id>/ and leftover finance uploads under
+storage/app/private/finance-imports/<user_id>/. Evidence under storage/verify/runs/ is never touched.
 
   php artisan verify:cleanup ab12cd34
   php artisan verify:cleanup --stale --dry-run
@@ -64,6 +67,10 @@ class Cleanup extends VerifyCommand
             'sessions' => DB::table('sessions')->where('user_id', $user->id)->count(),
         ]);
 
+        $uploads = $users->map(fn (User $user): string => "finance-imports/{$user->id}")
+            ->filter(fn (string $path): bool => Storage::disk('local')->directoryExists($path))
+            ->values();
+
         if (! $this->option('dry-run')) {
             DB::transaction(function () use ($users): void {
                 foreach ($users as $user) {
@@ -74,12 +81,14 @@ class Cleanup extends VerifyCommand
             });
 
             $mailboxes->each(fn (string $path): bool => File::deleteDirectory($path));
+            $users->each(fn (User $user): ?string => ImportUpload::deleteAllFor($user));
         }
 
         $this->json([
             'dry_run' => (bool) $this->option('dry-run'),
             'users' => $deleted->all(),
             'mailboxes' => $mailboxes->all(),
+            'uploads' => $uploads->map(fn (string $path): string => Storage::disk('local')->path($path))->all(),
             'evidence_kept' => storage_path('verify/runs'),
         ]);
 

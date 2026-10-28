@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
 beforeEach(function () {
@@ -151,4 +152,26 @@ test('a finance-imported scenario is readable by inspect and cleanup removes its
     expect(DB::table('transactions')->count())->toBe(0)
         ->and(DB::table('accounts')->count())->toBe(0)
         ->and(DB::table('import_batches')->count())->toBe(0);
+});
+
+test('a finance-rules scenario is categorized by its rule and cleanup removes its uploads', function () {
+    Storage::fake('local');
+    $scenario = verifyJson('verify:scenario', ['states' => ['finance-rules']]);
+    Storage::disk('local')->put("finance-imports/{$scenario['user_id']}/upload/file.csv", 'x');
+    Storage::disk('local')->put('finance-imports/999999/upload/file.csv', 'x');
+
+    $finance = verifyJson('verify:inspect', ['scenario' => $scenario['scenario'], '--only' => ['finance']])['finance'];
+
+    expect($finance['transactions'])->toMatchArray(['uncategorized' => 3, 'category_source' => ['rule' => 1], 'payee_source' => ['rule' => 1], 'by_category' => ['Groceries' => 1]])
+        ->and($finance['payees'])->toBe([['id' => $scenario['states']['finance-rules']['payee_id'], 'name' => 'Migros', 'transactions' => 1]])
+        ->and($finance['rules'][0])->toMatchArray(['name' => 'Migros', 'enabled' => true])
+        ->and(array_column($finance['rules'][0]['actions'], 'label'))->toBe(['Groceries', 'Migros']);
+
+    $cleanup = verifyJson('verify:cleanup', ['scenario' => $scenario['scenario']]);
+
+    expect($cleanup['uploads'])->toHaveCount(1)
+        ->and(Storage::disk('local')->directoryExists("finance-imports/{$scenario['user_id']}"))->toBeFalse()
+        ->and(Storage::disk('local')->directoryExists('finance-imports/999999'))->toBeTrue()
+        ->and(DB::table('rules')->count())->toBe(0)
+        ->and(DB::table('payees')->count())->toBe(0);
 });

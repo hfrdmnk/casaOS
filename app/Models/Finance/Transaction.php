@@ -18,6 +18,9 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property int $account_id
  * @property int|null $category_id
+ * @property int|null $payee_id
+ * @property FieldSource|null $category_source who set `category_id`
+ * @property FieldSource|null $payee_source who set `payee_id`
  * @property int|null $import_batch_id
  * @property string $date Y-m-d
  * @property string|null $time
@@ -32,8 +35,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Account $account
  * @property-read Category|null $category
+ * @property-read Payee|null $payee
  */
-#[Fillable(['account_id', 'category_id', 'import_batch_id', 'date', 'time', 'description', 'amount', 'fee', 'balance_after', 'currency', 'status', 'fingerprint'])]
+#[Fillable(['account_id', 'category_id', 'payee_id', 'category_source', 'payee_source', 'import_batch_id', 'date', 'time', 'description', 'amount', 'fee', 'balance_after', 'currency', 'status', 'fingerprint'])]
 class Transaction extends Model
 {
     /** @use HasFactory<TransactionFactory> */
@@ -56,6 +60,14 @@ class Transaction extends Model
     }
 
     /**
+     * @return BelongsTo<Payee, $this>
+     */
+    public function payee(): BelongsTo
+    {
+        return $this->belongsTo(Payee::class);
+    }
+
+    /**
      * @return BelongsTo<ImportBatch, $this>
      */
     public function importBatch(): BelongsTo
@@ -73,6 +85,8 @@ class Transaction extends Model
             'fee' => 'integer',
             'balance_after' => 'integer',
             'status' => TransactionStatus::class,
+            'category_source' => FieldSource::class,
+            'payee_source' => FieldSource::class,
         ];
     }
 }

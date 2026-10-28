@@ -6,6 +6,8 @@ use App\Http\Controllers\Finance\CategoryController;
 use App\Http\Controllers\Finance\ImportBatchController;
 use App\Http\Controllers\Finance\ImportController;
 use App\Http\Controllers\Finance\ImportMappingController;
+use App\Http\Controllers\Finance\PayeeController;
+use App\Http\Controllers\Finance\RuleController;
 use App\Http\Controllers\Finance\TransactionController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +31,26 @@ Route::middleware(['auth'])->prefix('finance')->name('finance.')->group(function
     Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
     Route::patch('categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
     Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+
+    Route::get('payees', [PayeeController::class, 'index'])->name('payees.index');
+    Route::post('payees', [PayeeController::class, 'store'])->name('payees.store');
+    Route::patch('payees/{payee}', [PayeeController::class, 'update'])->name('payees.update');
+    Route::post('payees/{payee}/merge', [PayeeController::class, 'merge'])->name('payees.merge');
+    Route::delete('payees/{payee}', [PayeeController::class, 'destroy'])->name('payees.destroy');
+
+    Route::get('rules', [RuleController::class, 'index'])->name('rules.index');
+    Route::get('rules/create', [RuleController::class, 'create'])->name('rules.create');
+    Route::post('rules', [RuleController::class, 'store'])->name('rules.store');
+    Route::put('rules/order', [RuleController::class, 'reorder'])->name('rules.reorder');
+    Route::post('rules/matches', [RuleController::class, 'matches'])->name('rules.matches');
+    Route::get('rules/apply', [RuleController::class, 'reviewAll'])->name('rules.review-all');
+    Route::post('rules/apply', [RuleController::class, 'applyAll'])->name('rules.apply-all');
+    Route::get('rules/{rule}/edit', [RuleController::class, 'edit'])->name('rules.edit');
+    Route::put('rules/{rule}', [RuleController::class, 'update'])->name('rules.update');
+    Route::patch('rules/{rule}/enabled', [RuleController::class, 'toggle'])->name('rules.toggle');
+    Route::delete('rules/{rule}', [RuleController::class, 'destroy'])->name('rules.destroy');
+    Route::get('rules/{rule}/apply', [RuleController::class, 'reviewOne'])->name('rules.review');
+    Route::post('rules/{rule}/apply', [RuleController::class, 'applyOne'])->name('rules.apply');
 
     Route::get('import', [ImportController::class, 'index'])->name('import.index');
     Route::post('import', [ImportController::class, 'store'])->name('import.store');

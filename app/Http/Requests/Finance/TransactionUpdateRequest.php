@@ -16,7 +16,8 @@ class TransactionUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_id' => ['present', 'nullable', 'integer', Rule::exists('categories', 'id')->where('user_id', $this->user()->id)],
+            'category_id' => ['sometimes', 'nullable', 'integer', Rule::exists('categories', 'id')->where('user_id', $this->user()->id)],
+            'payee_id' => ['sometimes', 'nullable', 'integer', Rule::exists('payees', 'id')->where('user_id', $this->user()->id)],
         ];
     }
 }

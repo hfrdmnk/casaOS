@@ -19,6 +19,7 @@ export default function ShowBatch({ batch }: { batch: Batch }) {
         ['Skipped as duplicate', summary.skipped_duplicate],
         ['Skipped as not CHF', summary.skipped_currency],
         ['Removed as reverted', summary.removed_reverted],
+        ['Set by rules', summary.categorized_by_rules ?? 0],
     ];
 
     return (
@@ -75,7 +76,7 @@ export default function ShowBatch({ batch }: { batch: Batch }) {
                 </div>
 
                 <dl
-                    className="grid gap-4 sm:grid-cols-5"
+                    className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6"
                     data-test="batch-summary"
                 >
                     {totals.map(([label, value]) => (
@@ -94,9 +95,9 @@ export default function ShowBatch({ batch }: { batch: Batch }) {
                     summary.skipped_reverted > 0) && (
                     <p className="text-sm text-muted-foreground">
                         {summary.unmapped_rows > 0 &&
-                            `${summary.unmapped_rows} rows matched no mapping's row filter. `}
+                            `${summary.unmapped_rows} ${summary.unmapped_rows === 1 ? 'row' : 'rows'} matched no mapping's row filter. `}
                         {summary.skipped_reverted > 0 &&
-                            `${summary.skipped_reverted} reverted rows had nothing to remove.`}
+                            `${summary.skipped_reverted} reverted ${summary.skipped_reverted === 1 ? 'row' : 'rows'} had nothing to remove.`}
                     </p>
                 )}
 

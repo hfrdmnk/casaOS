@@ -358,7 +358,8 @@ export default function ShowAccount({
                                             {transaction.date}
                                         </Td>
                                         <Td>
-                                            {transaction.description}{' '}
+                                            {transaction.payee ??
+                                                transaction.description}{' '}
                                             <StatusBadge
                                                 status={transaction.status}
                                             />

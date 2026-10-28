@@ -23,6 +23,8 @@ App UI (logged in):
 - [Finance: accounts and balances](./finance-accounts.md): `/finance/accounts`, snapshots and their differences, archive.
 - [Finance: transactions and categories](./finance-transactions.md): `/finance/transactions` filters and categorizing, `/finance/categories`.
 - [Finance: CSV import](./finance-import.md): `/finance/import` mapper wizard, saved mappings, de-dup, pending/reverted, batches and undo.
+- [Finance: payees](./finance-payees.md): `/finance/payees` create, rename, merge, delete; payee display, hand-set and search in the transaction list.
+- [Finance: rules](./finance-rules.md): `/finance/rules` ordered rules with live preview, create from a transaction, dry run and apply, manual-wins, rules on import.
 
 Public pages and email:
 

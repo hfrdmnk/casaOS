@@ -68,7 +68,7 @@ class AccountController extends Controller
             ], $account->reconciliation())),
             'mappings' => $account->mappings()->orderBy('name')->get()
                 ->map(fn (ImportMapping $mapping): array => ['id' => $mapping->id, 'name' => $mapping->name])->all(),
-            'recentTransactions' => $account->transactions()->with('category')
+            'recentTransactions' => $account->transactions()->with(['category', 'payee'])
                 ->orderByDesc('date')->orderByDesc('time')->orderByDesc('id')->limit(10)->get()
                 ->map(fn (Transaction $transaction): array => TransactionController::present($transaction))->all(),
         ]);

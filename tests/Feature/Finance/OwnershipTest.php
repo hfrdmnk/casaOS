@@ -5,6 +5,8 @@ use App\Models\Finance\BalanceSnapshot;
 use App\Models\Finance\Category;
 use App\Models\Finance\ImportBatch;
 use App\Models\Finance\ImportMapping;
+use App\Models\Finance\Payee;
+use App\Models\Finance\Rule;
 use App\Models\Finance\Transaction;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -20,6 +22,8 @@ test('another user gets 404 on every finance row', function (string $method, str
         'category' => Category::factory()->for($owner)->create(),
         'mapping' => ImportMapping::factory()->for($account)->create(),
         'batch' => ImportBatch::factory()->for($owner)->create(),
+        'payee' => Payee::factory()->for($owner)->create(),
+        'rule' => Rule::factory()->for($owner)->create(),
     ];
 
     $this->actingAs(User::factory()->create())
@@ -41,7 +45,40 @@ test('another user gets 404 on every finance row', function (string $method, str
     'delete mapping' => ['DELETE', 'finance.mappings.destroy', 'mapping'],
     'show batch' => ['GET', 'finance.batches.show', 'batch'],
     'undo batch' => ['POST', 'finance.batches.undo', 'batch'],
+    'rename payee' => ['PATCH', 'finance.payees.update', 'payee'],
+    'merge payee' => ['POST', 'finance.payees.merge', 'payee'],
+    'delete payee' => ['DELETE', 'finance.payees.destroy', 'payee'],
+    'edit rule' => ['GET', 'finance.rules.edit', 'rule'],
+    'update rule' => ['PUT', 'finance.rules.update', 'rule'],
+    'toggle rule' => ['PATCH', 'finance.rules.toggle', 'rule'],
+    'delete rule' => ['DELETE', 'finance.rules.destroy', 'rule'],
+    'review rule' => ['GET', 'finance.rules.review', 'rule'],
+    'apply rule' => ['POST', 'finance.rules.apply', 'rule'],
 ]);
+
+test('lists of payees and rules only show the user\'s own', function () {
+    $user = User::factory()->create();
+    Payee::factory()->create();
+    Rule::factory()->create();
+
+    $this->actingAs($user)->get(route('finance.payees.index'))->assertInertia(fn ($page) => $page->has('payees', 0));
+    $this->get(route('finance.rules.index'))->assertInertia(fn ($page) => $page->has('rules', 0));
+});
+
+test('rules never touch another user\'s transactions', function () {
+    $theirs = Transaction::factory()->create(['description' => 'Migros']);
+    $user = User::factory()->create();
+    $this->actingAs($user)->post(route('finance.rules.store'), [
+        'conditions' => [['field' => 'description', 'operator' => 'contains', 'value' => 'migros']],
+        'actions' => [['type' => 'set_category', 'value' => $user->categories()->value('id')]],
+    ]);
+
+    $this->postJson(route('finance.rules.matches'), ['conditions' => [['field' => 'description', 'operator' => 'contains', 'value' => 'migros']]])
+        ->assertJson(['count' => 0]);
+    $this->post(route('finance.rules.apply-all'));
+
+    expect($theirs->refresh()->category_id)->toBeNull();
+});
 
 test('another user gets 404 on an upload', function () {
     Storage::fake('local');

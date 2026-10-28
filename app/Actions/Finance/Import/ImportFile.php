@@ -2,10 +2,12 @@
 
 namespace App\Actions\Finance\Import;
 
+use App\Actions\Finance\Rules\RuleEngine;
 use App\Models\Finance\AccountType;
 use App\Models\Finance\BalanceSnapshot;
 use App\Models\Finance\ImportBatch;
 use App\Models\Finance\ImportMapping;
+use App\Models\Finance\Rule;
 use App\Models\Finance\SnapshotSource;
 use App\Models\Finance\Transaction;
 use App\Models\Finance\TransactionStatus;
@@ -22,9 +24,26 @@ use Illuminate\Support\Facades\DB;
  * finds the same fingerprints and creates nothing. A pending row that later arrives completed, or
  * with a changed amount or fee, is matched on date, time and description and updated in place; a
  * reverted row removes the transaction it matches.
+ *
+ * The user's rules run on every created transaction, and on every transaction updated in place
+ * for the fields they still own (a category or payee set by hand stays).
  */
 final class ImportFile
 {
+    /**
+     * The enabled rules of the import's user, in order.
+     *
+     * @var Collection<int, Rule>
+     */
+    private Collection $rules;
+
+    /**
+     * Transactions whose category or payee the rules changed in this import.
+     */
+    private int $ruled = 0;
+
+    public function __construct(private RuleEngine $engine) {}
+
     /**
      * Saved mappings of active accounts whose shape matches the file exactly.
      *
@@ -102,6 +121,9 @@ final class ImportFile
             );
         }
 
+        $this->rules = $this->engine->rulesFor($user);
+        $this->ruled = 0;
+
         return DB::transaction(function () use ($user, $filename, $first, $mappings, $parsed, $unmapped): ImportBatch {
             $batch = new ImportBatch(['filename' => $filename, 'signature' => $first->signature, 'summary' => []]);
             $batch->user_id = $user->id;
@@ -130,6 +152,7 @@ final class ImportFile
                 'removed_reverted' => $counts['removed_reverted'],
                 'skipped_reverted' => $counts['skipped_reverted'],
                 'unmapped_rows' => $unmapped,
+                'categorized_by_rules' => $this->ruled,
                 'accounts' => $accounts,
                 'currency_rows' => $currencyRows,
             ];
@@ -267,6 +290,7 @@ final class ImportFile
             'fingerprint' => $fingerprint,
         ]);
         $transaction->user_id = $batch->user_id;
+        $this->runRules($transaction);
         $transaction->save();
 
         $batch->changes()->create(['subject_type' => 'transaction', 'subject_id' => $transaction->id, 'action' => 'created']);
@@ -278,7 +302,7 @@ final class ImportFile
             'subject_type' => 'transaction',
             'subject_id' => $transaction->id,
             'action' => 'updated',
-            'before' => $transaction->only(UndoImportBatch::IMPORTED_TRANSACTION_FIELDS),
+            'before' => $transaction->only([...UndoImportBatch::IMPORTED_TRANSACTION_FIELDS, ...UndoImportBatch::RULE_TRANSACTION_FIELDS]),
         ]);
 
         $transaction->fill([
@@ -287,7 +311,16 @@ final class ImportFile
             'status' => $row->status,
             'balance_after' => $row->balance ?? $transaction->balance_after,
             'fingerprint' => $fingerprint,
-        ])->save();
+        ]);
+        $this->runRules($transaction);
+        $transaction->save();
+    }
+
+    private function runRules(Transaction $transaction): void
+    {
+        if ($this->engine->run($transaction, $this->rules) !== []) {
+            $this->ruled++;
+        }
     }
 
     private function remove(ImportBatch $batch, Transaction $transaction): void

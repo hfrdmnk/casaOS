@@ -32,6 +32,41 @@ export type TransactionRow = {
     status: 'completed' | 'pending';
     category_id: number | null;
     category: string | null;
+    category_source: FieldSource | null;
+    payee_id: number | null;
+    payee: string | null;
+    payee_source: FieldSource | null;
+};
+
+export type FieldSource = 'manual' | 'rule';
+
+export type RuleCondition = {
+    field: 'description' | 'payee' | 'amount' | 'absolute_amount' | 'account';
+    operator:
+        | 'contains'
+        | 'equals'
+        | 'starts_with'
+        | 'regex'
+        | 'is'
+        | 'greater_than'
+        | 'less_than'
+        | 'between';
+    value: string | number | number[];
+};
+
+export type RuleAction = {
+    type: 'set_category' | 'set_payee';
+    value?: number | null;
+    name?: string;
+};
+
+export type Rule = {
+    id: number;
+    name: string | null;
+    position: number;
+    enabled: boolean;
+    conditions: RuleCondition[];
+    actions: RuleAction[];
 };
 
 export type Option = { id: number; name: string };
@@ -73,6 +108,7 @@ export type Batch = {
         removed_reverted: number;
         skipped_reverted: number;
         unmapped_rows: number;
+        categorized_by_rules?: number;
         accounts: BatchAccountSummary[];
         currency_rows: {
             line: number;

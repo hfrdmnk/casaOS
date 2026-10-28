@@ -50,6 +50,23 @@ final readonly class ImportUpload
         Storage::disk('local')->deleteDirectory(dirname($this->path));
     }
 
+    /**
+     * Delete every upload of the user, e.g. when the user goes away. Returns the directory removed,
+     * or null when there was none.
+     */
+    public static function deleteAllFor(User $user): ?string
+    {
+        $directory = self::ROOT."/{$user->id}";
+
+        if (! Storage::disk('local')->directoryExists($directory)) {
+            return null;
+        }
+
+        Storage::disk('local')->deleteDirectory($directory);
+
+        return $directory;
+    }
+
     private static function directory(User $user, string $id): string
     {
         return self::ROOT."/{$user->id}/{$id}";

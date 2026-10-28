@@ -8,6 +8,8 @@ use App\Models\Finance\BalanceSnapshot;
 use App\Models\Finance\Category;
 use App\Models\Finance\ImportBatch;
 use App\Models\Finance\ImportMapping;
+use App\Models\Finance\Payee;
+use App\Models\Finance\Rule;
 use App\Models\Finance\Transaction;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -60,6 +62,22 @@ class User extends Authenticatable implements PasskeyUser
     public function categories(): HasMany
     {
         return $this->hasMany(Category::class);
+    }
+
+    /**
+     * @return HasMany<Payee, $this>
+     */
+    public function payees(): HasMany
+    {
+        return $this->hasMany(Payee::class);
+    }
+
+    /**
+     * @return HasMany<Rule, $this>
+     */
+    public function rules(): HasMany
+    {
+        return $this->hasMany(Rule::class);
     }
 
     /**

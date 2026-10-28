@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Finance;
 
+use App\Actions\Finance\Rules\ManageRules;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Finance\CategoryRequest;
 use App\Models\Finance\Category;
+use App\Models\Finance\Transaction;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,11 +53,15 @@ class CategoryController extends Controller
     }
 
     /**
-     * Delete a category. Its transactions become uncategorized.
+     * Delete a category. Its transactions become uncategorized and rules stop setting it.
      */
-    public function destroy(Category $category): RedirectResponse
+    public function destroy(Category $category, ManageRules $rules): RedirectResponse
     {
-        $category->delete();
+        DB::transaction(function () use ($category, $rules): void {
+            Transaction::query()->where('category_id', $category->id)->update(['category_id' => null, 'category_source' => null]);
+            $rules->forget($category->user, 'category', $category->id);
+            $category->delete();
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Category deleted.')]);
 

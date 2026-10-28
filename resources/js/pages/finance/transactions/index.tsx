@@ -1,5 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { WandSparkles } from 'lucide-react';
 import type { FormEvent } from 'react';
+import RuleController from '@/actions/App/Http/Controllers/Finance/RuleController';
 import TransactionController from '@/actions/App/Http/Controllers/Finance/TransactionController';
 import { DataTable, Td, Th } from '@/components/finance/data-table';
 import { Money } from '@/components/finance/money';
@@ -25,11 +27,13 @@ export default function Transactions({
     filters,
     accounts,
     categories,
+    payees,
 }: {
     transactions: Paginated<TransactionRow>;
     filters: Filters;
     accounts: Option[];
     categories: Option[];
+    payees: Option[];
 }) {
     function applyFilters(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -41,10 +45,14 @@ export default function Transactions({
         router.get(index.url(), query, { preserveState: true });
     }
 
-    function categorize(transaction: TransactionRow, value: string) {
+    function assign(
+        transaction: TransactionRow,
+        field: 'category_id' | 'payee_id',
+        value: string,
+    ) {
         router.patch(
             TransactionController.update.url(transaction.id),
-            { category_id: value === '' ? null : Number(value) },
+            { [field]: value === '' ? null : Number(value) },
             { preserveScroll: true, preserveState: true },
         );
     }
@@ -69,7 +77,7 @@ export default function Transactions({
                             id="filter-search"
                             name="search"
                             defaultValue={filters.search}
-                            placeholder="Description contains…"
+                            placeholder="Description or payee contains…"
                         />
                     </div>
                     <div className="grid gap-1">
@@ -145,9 +153,11 @@ export default function Transactions({
                                 <Th>Date</Th>
                                 <Th>Description</Th>
                                 <Th>Account</Th>
+                                <Th>Payee</Th>
                                 <Th>Category</Th>
                                 <Th className="text-right">Fee</Th>
                                 <Th className="text-right">Amount</Th>
+                                <Th />
                             </tr>
                         </thead>
                         <tbody>
@@ -157,13 +167,46 @@ export default function Transactions({
                                         {transaction.date}
                                     </Td>
                                     <Td>
-                                        {transaction.description}{' '}
+                                        {transaction.payee ??
+                                            transaction.description}{' '}
                                         <StatusBadge
                                             status={transaction.status}
                                         />
+                                        {transaction.payee && (
+                                            <div className="text-xs text-muted-foreground">
+                                                {transaction.description}
+                                            </div>
+                                        )}
                                     </Td>
                                     <Td className="whitespace-nowrap text-muted-foreground">
                                         {transaction.account}
+                                    </Td>
+                                    <Td>
+                                        <NativeSelect
+                                            aria-label={`Payee for ${transaction.description}`}
+                                            className="h-8 min-w-32"
+                                            value={transaction.payee_id ?? ''}
+                                            onChange={(event) =>
+                                                assign(
+                                                    transaction,
+                                                    'payee_id',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        >
+                                            <option value="">No payee</option>
+                                            {payees.map((payee) => (
+                                                <option
+                                                    key={payee.id}
+                                                    value={payee.id}
+                                                >
+                                                    {payee.name}
+                                                </option>
+                                            ))}
+                                        </NativeSelect>
+                                        <SourceNote
+                                            source={transaction.payee_source}
+                                        />
                                     </Td>
                                     <Td>
                                         <NativeSelect
@@ -173,8 +216,9 @@ export default function Transactions({
                                                 transaction.category_id ?? ''
                                             }
                                             onChange={(event) =>
-                                                categorize(
+                                                assign(
                                                     transaction,
+                                                    'category_id',
                                                     event.target.value,
                                                 )
                                             }
@@ -191,6 +235,9 @@ export default function Transactions({
                                                 </option>
                                             ))}
                                         </NativeSelect>
+                                        <SourceNote
+                                            source={transaction.category_source}
+                                        />
                                     </Td>
                                     <Td className="text-right text-muted-foreground">
                                         {transaction.fee !== 0 && (
@@ -202,6 +249,27 @@ export default function Transactions({
                                             value={transaction.amount}
                                             signed
                                         />
+                                    </Td>
+                                    <Td className="text-right">
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="size-8"
+                                            title="Create rule from this transaction"
+                                            asChild
+                                        >
+                                            <Link
+                                                href={RuleController.create({
+                                                    query: {
+                                                        transaction:
+                                                            transaction.id,
+                                                    },
+                                                })}
+                                                aria-label={`Create rule from ${transaction.description}`}
+                                            >
+                                                <WandSparkles />
+                                            </Link>
+                                        </Button>
                                     </Td>
                                 </tr>
                             ))}
@@ -254,6 +322,18 @@ export default function Transactions({
                 )}
             </div>
         </>
+    );
+}
+
+function SourceNote({ source }: { source: TransactionRow['category_source'] }) {
+    if (source === null) {
+        return null;
+    }
+
+    return (
+        <div className="mt-0.5 text-xs text-muted-foreground">
+            {source === 'rule' ? 'set by rule' : 'set by hand'}
+        </div>
     );
 }
 
