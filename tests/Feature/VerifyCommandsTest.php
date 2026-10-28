@@ -43,6 +43,7 @@ test('verify commands refuse to run outside local and testing', function (string
     'inspect' => ['verify:inspect', ['scenario' => 'abcdefgh']],
     'mail' => ['verify:mail', ['scenario' => 'abcdefgh']],
     'cleanup' => ['verify:cleanup', ['--stale' => true]],
+    'mcp-token' => ['verify:mcp-token', ['scenario' => 'abcdefgh']],
 ]);
 
 test('a two-factor scenario is created and its state is readable by inspect', function () {
@@ -174,4 +175,23 @@ test('a finance-rules scenario is categorized by its rule and cleanup removes it
         ->and(Storage::disk('local')->directoryExists('finance-imports/999999'))->toBeTrue()
         ->and(DB::table('rules')->count())->toBe(0)
         ->and(DB::table('payees')->count())->toBe(0);
+});
+
+test('an MCP token minted for a scenario authenticates the finance server with the chosen abilities and goes with cleanup', function () {
+    $scenario = verifyJson('verify:scenario');
+
+    $readWrite = verifyJson('verify:mcp-token', ['scenario' => $scenario['scenario']]);
+    $readOnly = verifyJson('verify:mcp-token', ['scenario' => $scenario['scenario'], '--read-only' => true]);
+
+    expect($readWrite)->toMatchArray(['user_id' => $scenario['user_id'], 'abilities' => ['finance:read', 'finance:write'], 'url' => config('app.url').'/mcp/finance'])
+        ->and($readOnly['abilities'])->toBe(['finance:read'])
+        ->and(collect(verifyJson('verify:inspect', ['scenario' => $scenario['scenario']])['account']['api_tokens'])->pluck('abilities')->all())
+        ->toBe([['finance:read', 'finance:write'], ['finance:read']]);
+
+    $this->postJson('/mcp/finance', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'ping'], ['Authorization' => "Bearer {$readOnly['token']}"])
+        ->assertOk();
+
+    verifyJson('verify:cleanup', ['scenario' => $scenario['scenario']]);
+
+    expect(DB::table('personal_access_tokens')->count())->toBe(0);
 });

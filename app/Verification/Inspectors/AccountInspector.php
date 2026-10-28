@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Verification\Contracts\Inspector;
 use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Fortify;
+use Laravel\Sanctum\PersonalAccessToken;
 use PragmaRX\Google2FA\Google2FA;
 
 class AccountInspector implements Inspector
@@ -28,6 +29,12 @@ class AccountInspector implements Inspector
             'sessions' => DB::table('sessions')->where('user_id', $user->id)->count(),
             'password_reset_pending' => DB::table('password_reset_tokens')->where('email', $user->email)->exists(),
             'passkeys' => $user->passkeys()->pluck('name')->all(),
+            'api_tokens' => $user->tokens()->orderBy('id')->get()->map(fn (PersonalAccessToken $token): array => [
+                'id' => $token->id,
+                'name' => $token->name,
+                'abilities' => $token->abilities,
+                'last_used_at' => $token->last_used_at?->toIso8601String(),
+            ])->all(),
             'two_factor' => [
                 'enabled' => $user->hasEnabledTwoFactorAuthentication(),
                 'confirmed_at' => $user->two_factor_confirmed_at?->toIso8601String(),

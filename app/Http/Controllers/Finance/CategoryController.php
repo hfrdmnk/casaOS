@@ -2,15 +2,12 @@
 
 namespace App\Http\Controllers\Finance;
 
-use App\Actions\Finance\Rules\ManageRules;
+use App\Actions\Finance\Categories\ManageCategories;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Finance\CategoryRequest;
 use App\Models\Finance\Category;
-use App\Models\Finance\Transaction;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,21 +28,21 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function store(CategoryRequest $request): RedirectResponse
+    public function store(Request $request, ManageCategories $categories): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
 
-        $user->categories()->create($request->validated());
+        $categories->create($user, $request->string('name')->toString());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Category created.')]);
 
         return to_route('finance.categories.index');
     }
 
-    public function update(CategoryRequest $request, Category $category): RedirectResponse
+    public function update(Request $request, Category $category, ManageCategories $categories): RedirectResponse
     {
-        $category->update($request->validated());
+        $categories->rename($category, $request->string('name')->toString());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Category renamed.')]);
 
@@ -55,13 +52,9 @@ class CategoryController extends Controller
     /**
      * Delete a category. Its transactions become uncategorized and rules stop setting it.
      */
-    public function destroy(Category $category, ManageRules $rules): RedirectResponse
+    public function destroy(Category $category, ManageCategories $categories): RedirectResponse
     {
-        DB::transaction(function () use ($category, $rules): void {
-            Transaction::query()->where('category_id', $category->id)->update(['category_id' => null, 'category_source' => null]);
-            $rules->forget($category->user, 'category', $category->id);
-            $category->delete();
-        });
+        $categories->delete($category);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Category deleted.')]);
 

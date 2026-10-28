@@ -73,4 +73,15 @@ final class Money
 
         return sprintf('%s%d.%02d', $sign, intdiv($absolute, 100), $absolute % 100);
     }
+
+    /**
+     * Format Rappen for people, as the web UI does: `CHF 1'234.50`, `CHF -6.70`.
+     */
+    public static function chf(int $minor): string
+    {
+        $sign = $minor < 0 ? '-' : '';
+        $absolute = abs($minor);
+
+        return sprintf('CHF %s%s.%02d', $sign, number_format(intdiv($absolute, 100), 0, '', "'"), $absolute % 100);
+    }
 }
