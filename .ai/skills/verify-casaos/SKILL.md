@@ -1,6 +1,6 @@
 ---
 name: verify-casaos
-description: "Drive the real casaOS app like a user and prove a change works: isolated scenario user, app UI and public auth pages in agent-browser, captured scenario mail, artisan CLI, evidence in storage/verify/runs/, outcome pass/fail/blocked. Use after any user-facing change, before opening a PR, when asked to verify, reproduce or show proof, and when a feature file in features/ matches the work."
+description: 'Drive the real casaOS app like a user and prove a change works: isolated scenario user, app UI and public auth pages in agent-browser, captured scenario mail, artisan CLI, evidence in storage/verify/runs/, outcome pass/fail/blocked. Use after any user-facing change, before opening a PR, when asked to verify, reproduce or show proof, and when a feature file in features/ matches the work.'
 ---
 
 # Verify casaOS
@@ -35,18 +35,18 @@ If the session cannot get a database, frontend build or running server (a CI or 
 
 ## Levers
 
-| Need | Command |
-|---|---|
-| Check the environment is safe and ready | `php artisan verify:doctor` |
-| Isolated user in a named state | `php artisan verify:scenario [states...]` (`--list` shows states; today: `two-factor`) |
-| Log the browser in as the scenario user | `php artisan verify:login <scenario> [--path=/settings/profile]` prints `.url` |
-| Read state as JSON | `php artisan verify:inspect <scenario> [--only=account]` |
-| Read mail sent to the scenario | `php artisan verify:mail <scenario> [--latest]` |
-| Current TOTP code for a two-factor scenario | `php artisan verify:inspect <scenario> \| jq -r .account.two_factor.current_code` |
-| Browser | `agent-browser` (preinstalled in orbs; `agent-browser skills get core --full` for usage) |
-| Drain background jobs | `php artisan queue:work --stop-when-empty` |
-| Clean up this run | `php artisan verify:cleanup <scenario>` |
-| Sweep orphans from failed runs | `php artisan verify:cleanup --stale [--hours=0] [--dry-run]` |
+| Need                                        | Command                                                                                  |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Check the environment is safe and ready     | `php artisan verify:doctor`                                                              |
+| Isolated user in a named state              | `php artisan verify:scenario [states...]` (`--list` shows states; today: `two-factor`)   |
+| Log the browser in as the scenario user     | `php artisan verify:login <scenario> [--path=/settings/profile]` prints `.url`           |
+| Read state as JSON                          | `php artisan verify:inspect <scenario> [--only=account]`                                 |
+| Read mail sent to the scenario              | `php artisan verify:mail <scenario> [--latest]`                                          |
+| Current TOTP code for a two-factor scenario | `php artisan verify:inspect <scenario> \| jq -r .account.two_factor.current_code`        |
+| Browser                                     | `agent-browser` (preinstalled in orbs; `agent-browser skills get core --full` for usage) |
+| Drain background jobs                       | `php artisan queue:work --stop-when-empty`                                               |
+| Clean up this run                           | `php artisan verify:cleanup <scenario>`                                                  |
+| Sweep orphans from failed runs              | `php artisan verify:cleanup --stale [--hours=0] [--dry-run]`                             |
 
 What they do:
 
