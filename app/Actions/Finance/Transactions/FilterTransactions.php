@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Builder;
  * - `from`, `to`: Y-m-d, inclusive
  * - `search`: text in the raw description or the payee name
  * - `transfer`: `yes`, `no`, or `suggested` for rows in an open transfer suggestion
+ * - `subscription`: a subscription id, `any` for rows linked to one, or `none`
  *
  * Ids of another user's rows simply match nothing.
  */
@@ -39,6 +40,7 @@ final class FilterTransactions
             'to' => ['nullable', 'date_format:Y-m-d'],
             'search' => ['nullable', 'string', 'max:200'],
             'transfer' => ['nullable', 'in:yes,no,suggested'],
+            'subscription' => ['nullable', 'regex:/^(any|none|\d+)$/'],
         ];
     }
 
@@ -51,7 +53,7 @@ final class FilterTransactions
     public function query(User $user, array $filters): Builder
     {
         return Transaction::query()->ownedBy($user)
-            ->with(['account', 'category', 'payee', 'transferCounterpart.account'])
+            ->with(['account', 'category', 'payee', 'transferCounterpart.account', 'subscription'])
             ->when($filters['account'] ?? null, fn (Builder $query, mixed $account) => $query->where('account_id', (int) $account))
             ->when($filters['category'] ?? null, fn (Builder $query, mixed $category) => $category === 'none'
                 ? $query->whereNull('category_id')
@@ -70,6 +72,11 @@ final class FilterTransactions
                 default => $query->where(fn (Builder $query) => $query
                     ->whereIn('id', $this->suggested($user)->select('outflow_id'))
                     ->orWhereIn('id', $this->suggested($user)->select('inflow_id'))),
+            })
+            ->when($filters['subscription'] ?? null, fn (Builder $query, mixed $subscription) => match ($subscription) {
+                'any' => $query->whereNotNull('subscription_id'),
+                'none' => $query->whereNull('subscription_id'),
+                default => $query->where('subscription_id', (int) $subscription),
             })
             ->orderByDesc('date')->orderByDesc('time')->orderByDesc('id');
     }

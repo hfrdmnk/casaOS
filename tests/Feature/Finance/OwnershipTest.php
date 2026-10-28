@@ -7,6 +7,8 @@ use App\Models\Finance\ImportBatch;
 use App\Models\Finance\ImportMapping;
 use App\Models\Finance\Payee;
 use App\Models\Finance\Rule;
+use App\Models\Finance\Subscription;
+use App\Models\Finance\SubscriptionSuggestion;
 use App\Models\Finance\Transaction;
 use App\Models\Finance\TransferSuggestion;
 use App\Models\User;
@@ -30,6 +32,12 @@ test('another user gets 404 on every finance row', function (string $method, str
         'user_id' => $owner->id,
         'outflow_id' => Transaction::factory()->for($account)->create(['amount' => -500])->id,
         'inflow_id' => Transaction::factory()->for(Account::factory()->for($owner))->create(['amount' => 500])->id,
+    ]);
+
+    $rows['subscription'] = Subscription::factory()->for($owner)->create();
+    $rows['subscription_suggestion'] = SubscriptionSuggestion::query()->forceCreate([
+        'user_id' => $owner->id, 'match_key' => 'description:owner', 'name' => 'Owner', 'description_match' => 'owner',
+        'amount' => 500, 'interval' => 'monthly', 'next_date' => '2026-11-01', 'transaction_ids' => [],
     ]);
 
     $this->actingAs(User::factory()->create())
@@ -67,7 +75,28 @@ test('another user gets 404 on every finance row', function (string $method, str
     'unmark transfer' => ['DELETE', 'finance.transactions.unmark-transfer', 'transaction'],
     'confirm suggestion' => ['POST', 'finance.transfers.confirm', 'suggestion'],
     'dismiss suggestion' => ['POST', 'finance.transfers.dismiss', 'suggestion'],
+    'update subscription' => ['PATCH', 'finance.subscriptions.update', 'subscription'],
+    'cancel subscription' => ['POST', 'finance.subscriptions.cancel', 'subscription'],
+    'confirm subscription suggestion' => ['POST', 'finance.subscriptions.confirm', 'subscription_suggestion'],
+    'dismiss subscription suggestion' => ['POST', 'finance.subscriptions.dismiss', 'subscription_suggestion'],
+    'link transaction to a subscription' => ['POST', 'finance.transactions.link-subscription', 'transaction'],
+    'unlink transaction from a subscription' => ['DELETE', 'finance.transactions.unlink-subscription', 'transaction'],
 ]);
+
+test('a transaction cannot be linked to another user\'s subscription or marked as one by them', function () {
+    $owner = User::factory()->create();
+    $theirs = Subscription::factory()->for($owner)->create();
+    $theirTransaction = Transaction::factory()->for(Account::factory()->for($owner))->create(['amount' => -500]);
+    $user = User::factory()->create();
+    $mine = Transaction::factory()->for(Account::factory()->for($user))->create(['amount' => -500]);
+
+    $this->actingAs($user)->post(route('finance.transactions.link-subscription', $mine), ['subscription_id' => $theirs->id])->assertNotFound();
+    $this->post(route('finance.subscriptions.store'), ['transaction_id' => $theirTransaction->id, 'name' => 'X', 'amount' => '5', 'interval' => 'monthly'])->assertNotFound();
+    $this->post(route('finance.subscriptions.store'), ['name' => 'X', 'amount' => '5', 'interval' => 'monthly', 'payee_id' => Payee::factory()->for($owner)->create()->id])->assertNotFound();
+
+    expect($mine->fresh()->subscription_id)->toBeNull()
+        ->and(Subscription::query()->count())->toBe(1);
+});
 
 test('a transaction cannot be paired with another user\'s, and suggestions stay private', function () {
     $owner = User::factory()->create();

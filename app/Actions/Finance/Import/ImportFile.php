@@ -3,6 +3,7 @@
 namespace App\Actions\Finance\Import;
 
 use App\Actions\Finance\Rules\RuleEngine;
+use App\Actions\Finance\Subscriptions\ManageSubscriptions;
 use App\Actions\Finance\Transfers\ManageTransfers;
 use App\Actions\Finance\Transfers\PairTransfers;
 use App\Models\Finance\AccountType;
@@ -11,6 +12,7 @@ use App\Models\Finance\ImportBatch;
 use App\Models\Finance\ImportMapping;
 use App\Models\Finance\Rule;
 use App\Models\Finance\SnapshotSource;
+use App\Models\Finance\Subscription;
 use App\Models\Finance\Transaction;
 use App\Models\Finance\TransactionStatus;
 use App\Models\User;
@@ -29,7 +31,8 @@ use Illuminate\Support\Facades\DB;
  *
  * The user's rules run on every created transaction, and on every transaction updated in place
  * for the fields they still own (a category or payee set by hand stays). Transfer pairing runs
- * after the rules, on the rows the import created or completed.
+ * after the rules, on the rows the import created or completed; then those rows are linked to the
+ * active subscriptions they match and subscription detection runs.
  */
 final class ImportFile
 {
@@ -52,7 +55,21 @@ final class ImportFile
      */
     private array $touched = [];
 
-    public function __construct(private RuleEngine $engine, private PairTransfers $pairing, private ManageTransfers $transfers) {}
+    /**
+     * Ids of the transactions this import created.
+     *
+     * @var list<int>
+     */
+    private array $created = [];
+
+    /**
+     * Ids of the subscriptions that lost a charge this import removed as reverted.
+     *
+     * @var array<int, true>
+     */
+    private array $lostCharges = [];
+
+    public function __construct(private RuleEngine $engine, private PairTransfers $pairing, private ManageTransfers $transfers, private ManageSubscriptions $subscriptions) {}
 
     /**
      * Saved mappings of active accounts whose shape matches the file exactly.
@@ -134,6 +151,8 @@ final class ImportFile
         $this->rules = $this->engine->rulesFor($user);
         $this->ruled = 0;
         $this->touched = [];
+        $this->created = [];
+        $this->lostCharges = [];
 
         return DB::transaction(function () use ($user, $filename, $first, $mappings, $parsed, $unmapped): ImportBatch {
             $batch = new ImportBatch(['filename' => $filename, 'signature' => $first->signature, 'summary' => []]);
@@ -156,6 +175,10 @@ final class ImportFile
             }
 
             $transfers = ($this->pairing)($user, $this->touched, $batch);
+            $subscriptions = $this->subscriptions->afterImport($user, $this->touched, $this->created, $batch);
+
+            Subscription::query()->whereIn('id', array_keys($this->lostCharges))->get()
+                ->each(fn (Subscription $subscription) => $this->subscriptions->refreshNextDate($subscription));
 
             $batch->summary = [
                 'created' => $counts['created'],
@@ -168,6 +191,8 @@ final class ImportFile
                 'categorized_by_rules' => $this->ruled,
                 'paired_as_transfers' => $transfers['paired'],
                 'transfer_suggestions' => $transfers['suggested'],
+                'linked_to_subscriptions' => $subscriptions['linked'],
+                'subscription_suggestions' => $subscriptions['suggested'],
                 'accounts' => $accounts,
                 'currency_rows' => $currencyRows,
             ];
@@ -308,6 +333,7 @@ final class ImportFile
         $this->runRules($transaction);
         $transaction->save();
         $this->touched[] = $transaction->id;
+        $this->created[] = $transaction->id;
 
         $batch->changes()->create(['subject_type' => 'transaction', 'subject_id' => $transaction->id, 'action' => 'created']);
     }
@@ -350,6 +376,11 @@ final class ImportFile
         ]);
 
         $this->transfers->detach($transaction);
+
+        if ($transaction->subscription_id !== null) {
+            $this->lostCharges[$transaction->subscription_id] = true;
+        }
+
         $transaction->delete();
     }
 

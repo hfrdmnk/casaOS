@@ -10,6 +10,8 @@ use App\Http\Requests\Finance\TransactionUpdateRequest;
 use App\Models\Finance\Account;
 use App\Models\Finance\Category;
 use App\Models\Finance\Payee;
+use App\Models\Finance\Subscription;
+use App\Models\Finance\SubscriptionInterval;
 use App\Models\Finance\Transaction;
 use App\Models\Finance\TransferSuggestion;
 use App\Models\User;
@@ -50,12 +52,16 @@ class TransactionController extends Controller
                 'to' => (string) ($filters['to'] ?? ''),
                 'search' => (string) ($filters['search'] ?? ''),
                 'transfer' => (string) ($filters['transfer'] ?? ''),
+                'subscription' => (string) ($filters['subscription'] ?? ''),
             ],
             'suggestions_count' => $transfers->openSuggestions(TransferSuggestion::query()->ownedBy($user))->count(),
             'accounts' => Account::query()->ownedBy($user)->orderBy('name')->get(['id', 'name'])
                 ->map(fn (Account $account): array => ['id' => $account->id, 'name' => $account->name])->all(),
             'categories' => self::categoryOptions($user),
             'payees' => self::payeeOptions($user),
+            'subscriptions' => Subscription::query()->ownedBy($user)->active()->orderBy('name')->get(['id', 'name'])
+                ->map(fn (Subscription $subscription): array => ['id' => $subscription->id, 'name' => $subscription->name])->all(),
+            'intervals' => SubscriptionInterval::options(),
         ]);
     }
 
@@ -100,6 +106,9 @@ class TransactionController extends Controller
             'payee_source' => $transaction->payee_source?->value,
             'is_transfer' => $transaction->is_transfer,
             'transfer_source' => $transaction->transfer_source?->value,
+            'subscription_id' => $transaction->subscription_id,
+            'subscription' => $transaction->subscription?->name,
+            'subscription_source' => $transaction->subscription_source?->value,
             'counterpart' => $transaction->transferCounterpart === null ? null : [
                 'id' => $transaction->transferCounterpart->id,
                 'account' => $transaction->transferCounterpart->account->name,

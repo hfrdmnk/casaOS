@@ -38,6 +38,9 @@ export type TransactionRow = {
     payee_source: FieldSource | null;
     is_transfer: boolean;
     transfer_source: TransferSource | null;
+    subscription_id: number | null;
+    subscription: string | null;
+    subscription_source: 'auto' | 'manual' | null;
     counterpart: {
         id: number;
         account: string;
@@ -131,6 +134,8 @@ export type Batch = {
         categorized_by_rules?: number;
         paired_as_transfers?: number;
         transfer_suggestions?: number;
+        linked_to_subscriptions?: number;
+        subscription_suggestions?: number;
         accounts: BatchAccountSummary[];
         currency_rows: {
             line: number;
@@ -152,4 +157,109 @@ export type Paginated<T> = {
     total: number;
     prev_page_url: string | null;
     next_page_url: string | null;
+};
+
+export type SubscriptionInterval =
+    | 'weekly'
+    | 'monthly'
+    | 'quarterly'
+    | 'yearly';
+
+export type IntervalOption = { value: SubscriptionInterval; label: string };
+
+export type SubscriptionPayment = {
+    id: number;
+    date: string;
+    description: string;
+    account: string;
+    amount: number;
+    status: 'completed' | 'pending';
+};
+
+export type Subscription = {
+    id: number;
+    name: string;
+    payee_id: number | null;
+    payee: string | null;
+    description_match: string | null;
+    account_id: number | null;
+    account: string | null;
+    amount: number;
+    interval: SubscriptionInterval;
+    monthly: number;
+    next_date: string;
+    status: 'active' | 'cancelled';
+    source: 'manual' | 'detected';
+    cancelled_at: string | null;
+    payments: SubscriptionPayment[];
+};
+
+export type SubscriptionSuggestion = {
+    id: number;
+    name: string;
+    match: string;
+    account: string | null;
+    amount: number;
+    interval: SubscriptionInterval;
+    monthly: number;
+    next_date: string;
+    charges: {
+        id: number;
+        date: string;
+        amount: number;
+        description: string;
+    }[];
+};
+
+export type DashboardAccount = {
+    id: number;
+    name: string;
+    type: string;
+    type_label: string;
+    balance: number;
+    latest_snapshot_date: string | null;
+    mismatched_snapshots: number;
+    latest_difference: number | null;
+};
+
+export type DashboardSummary = {
+    has_accounts: boolean;
+    today: string;
+    net_worth: { total: number; accounts: number; stale_since: string | null };
+    account_groups: {
+        type: string;
+        label: string;
+        total: number;
+        accounts: DashboardAccount[];
+    }[];
+    spending: {
+        month: string;
+        from: string;
+        to: string;
+        total: number;
+        categories: {
+            category_id: number | null;
+            category: string;
+            amount: number;
+            count: number;
+        }[];
+    };
+    subscriptions: {
+        monthly_total: number;
+        active: number;
+        upcoming: {
+            id: number;
+            name: string;
+            amount: number;
+            interval: SubscriptionInterval;
+            next_date: string;
+            overdue: boolean;
+        }[];
+        upcoming_total: number;
+    };
+    attention: {
+        uncategorized: number;
+        transfer_suggestions: number;
+        subscription_suggestions: number;
+    };
 };

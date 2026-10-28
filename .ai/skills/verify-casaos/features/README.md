@@ -26,11 +26,13 @@ App UI (logged in):
 - [Finance: CSV import](./finance-import.md): `/finance/import` mapper wizard, saved mappings, de-dup, pending/reverted, batches and undo.
 - [Finance: payees](./finance-payees.md): `/finance/payees` create, rename, merge, delete; payee display, hand-set and search in the transaction list.
 - [Finance: rules](./finance-rules.md): `/finance/rules` ordered rules with live preview, create from a transaction, dry run and apply, manual-wins, rules on import.
+- [Finance: subscriptions](./finance-subscriptions.md): `/finance/subscriptions` detection on import and `Detect subscriptions`, confirm/dismiss/cancel, `Mark as subscription` and link/unlink from a transaction, undo.
+- [Finance: dashboard](./finance-dashboard.md): `/` net worth with stale snapshots, balances by type with reconciliation flags, spending by category with a month switch, upcoming subscriptions, needs attention, empty state.
 - [Finance: transfers](./finance-transfers.md): automatic pairing on import and `Find transfers`, suggestions at `/finance/transfers`, pair/unpair/mark/unmark from a transaction, `Mark as transfer` rule action, undo.
 
 MCP (an agent with a bearer token):
 
-- [Finance MCP server](./finance-mcp.md): `POST /mcp/finance`, 37 tools and the `categorize_transactions` prompt, ability enforcement, per-user scoping.
+- [Finance MCP server](./finance-mcp.md): `POST /mcp/finance`, 47 tools and the `categorize_transactions` prompt, ability enforcement, per-user scoping.
 
 Public pages and email:
 

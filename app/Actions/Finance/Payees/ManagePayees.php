@@ -3,7 +3,9 @@
 namespace App\Actions\Finance\Payees;
 
 use App\Actions\Finance\Rules\ManageRules;
+use App\Actions\Finance\Subscriptions\DetectSubscriptions;
 use App\Models\Finance\Payee;
+use App\Models\Finance\Subscription;
 use App\Models\Finance\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +57,7 @@ final class ManagePayees
 
         return DB::transaction(function () use ($from, $into): int {
             $moved = Transaction::query()->where('payee_id', $from->id)->update(['payee_id' => $into->id]);
+            Subscription::query()->where('payee_id', $from->id)->update(['payee_id' => $into->id]);
             $this->rules->replacePayee($from->user, $from->id, $into->id);
             $from->delete();
 
@@ -70,6 +73,8 @@ final class ManagePayees
     {
         DB::transaction(function () use ($payee): void {
             Transaction::query()->where('payee_id', $payee->id)->update(['payee_id' => null, 'payee_source' => null]);
+            // Subscriptions that matched the payee match its name in the description instead.
+            Subscription::query()->where('payee_id', $payee->id)->update(['payee_id' => null, 'description_match' => DetectSubscriptions::normalize($payee->name)]);
             $this->rules->forget($payee->user, 'payee', $payee->id);
             $payee->delete();
         });

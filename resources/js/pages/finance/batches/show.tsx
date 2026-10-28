@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { show as showAccount } from '@/routes/finance/accounts';
 import { show } from '@/routes/finance/batches';
 import { index } from '@/routes/finance/import';
+import { index as subscriptions } from '@/routes/finance/subscriptions';
 import { index as transfers } from '@/routes/finance/transfers';
 import type { Batch } from '@/types/finance';
 
@@ -22,6 +23,7 @@ export default function ShowBatch({ batch }: { batch: Batch }) {
         ['Removed as reverted', summary.removed_reverted],
         ['Set by rules', summary.categorized_by_rules ?? 0],
         ['Paired as transfers', summary.paired_as_transfers ?? 0],
+        ['Linked to subscriptions', summary.linked_to_subscriptions ?? 0],
     ];
 
     return (
@@ -103,6 +105,23 @@ export default function ShowBatch({ batch }: { batch: Batch }) {
                             a decision.{' '}
                             <Link href={transfers()} className="underline">
                                 Review suggestions
+                            </Link>
+                        </p>
+                    )}
+
+                {(summary.subscription_suggestions ?? 0) > 0 &&
+                    !batch.undone_at && (
+                        <p
+                            className="text-sm"
+                            data-test="subscription-suggestions"
+                        >
+                            {summary.subscription_suggestions}{' '}
+                            {summary.subscription_suggestions === 1
+                                ? 'possible subscription needs'
+                                : 'possible subscriptions need'}{' '}
+                            a decision.{' '}
+                            <Link href={subscriptions()} className="underline">
+                                Review subscriptions
                             </Link>
                         </p>
                     )}

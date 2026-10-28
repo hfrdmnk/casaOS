@@ -16,7 +16,8 @@ use Laravel\Mcp\Server\Attributes\Version;
 #[Version('1.0.0')]
 #[Instructions(<<<'TEXT'
 Access to the user's personal finances in casaOS: accounts and balances, bank transactions,
-categories, payees, categorization rules, transfers between accounts and CSV imports. Everything
+categories, payees, categorization rules, transfers between accounts, subscriptions (recurring
+payments), the dashboard summary and CSV imports. Everything
 belongs to the user of the API token. Amounts are integers in Rappen (1 CHF = 100 Rappen, negative =
 money out), each with a formatted `*_chf` string. casaOS is deterministic: categorize with rules
 (create_rule, preview_apply_rules, apply_rules) rather than many one-off edits, and show the user
@@ -70,6 +71,18 @@ class FinanceServer extends Server
         Finance\MarkTransferTool::class,
         Finance\UnmarkTransferTool::class,
         Finance\TransferCandidatesTool::class,
+
+        Finance\ListSubscriptionsTool::class,
+        Finance\DetectSubscriptionsTool::class,
+        Finance\ConfirmSubscriptionSuggestionTool::class,
+        Finance\DismissSubscriptionSuggestionTool::class,
+        Finance\CreateSubscriptionTool::class,
+        Finance\UpdateSubscriptionTool::class,
+        Finance\CancelSubscriptionTool::class,
+        Finance\LinkSubscriptionTransactionTool::class,
+        Finance\UnlinkSubscriptionTransactionTool::class,
+
+        Finance\GetDashboardSummaryTool::class,
 
         Finance\ListImportBatchesTool::class,
         Finance\GetImportBatchTool::class,

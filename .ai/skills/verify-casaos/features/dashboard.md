@@ -1,6 +1,6 @@
 # Dashboard and navigation
 
-A logged-in user lands on the dashboard at `/`, which shows the app shell: a sidebar with the casaOS logo and a `Dashboard` link, and a user menu with `Settings` and `Log out`. Guests are sent to the login page. The dashboard body is a placeholder until modules (finance, fitness) add content.
+A logged-in user lands on the dashboard at `/`, which shows the app shell: a sidebar with the casaOS logo and a `Dashboard` link, and a user menu with `Settings` and `Log out`. Guests are sent to the login page. The dashboard body is the finance overview, see [finance-dashboard](./finance-dashboard.md).
 
 Help article: none
 

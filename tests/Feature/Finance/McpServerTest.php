@@ -14,6 +14,8 @@ use App\Models\Finance\Payee;
 use App\Models\Finance\Rule;
 use App\Models\Finance\RuleActionType;
 use App\Models\Finance\RuleConditionField;
+use App\Models\Finance\Subscription;
+use App\Models\Finance\SubscriptionSuggestion;
 use App\Models\Finance\Transaction;
 use App\Models\Finance\TransactionStatus;
 use App\Models\Finance\TransferSource;
@@ -87,9 +89,10 @@ test('exactly the reading tools are read-only', function () {
     $readOnly = collect(financeTools())->filter(fn (string $tool): bool => app($tool)->isReadOnly())->map(fn (string $tool): string => app($tool)->name());
 
     expect($readOnly->sort()->values()->all())->toBe([
-        'get_account', 'get_import_batch', 'get_transaction', 'list_accounts', 'list_categories', 'list_import_batches', 'list_payees',
-        'list_rules', 'list_transactions', 'list_transfer_suggestions', 'preview_apply_rules', 'preview_rule_matches', 'transfer_candidates',
-    ])->and(count(financeTools()))->toBe(37);
+        'get_account', 'get_dashboard_summary', 'get_import_batch', 'get_transaction', 'list_accounts', 'list_categories', 'list_import_batches',
+        'list_payees', 'list_rules', 'list_subscriptions', 'list_transactions', 'list_transfer_suggestions', 'preview_apply_rules',
+        'preview_rule_matches', 'transfer_candidates',
+    ])->and(count(financeTools()))->toBe(47);
 });
 
 test('a read-only token is refused on every write tool and changes nothing', function (string $tool) {
@@ -137,16 +140,23 @@ test('another user\'s ids are not found and nothing of theirs changes', function
             'outflow_id' => Transaction::factory()->for($account)->create(['amount' => -500])->id,
             'inflow_id' => Transaction::factory()->for(Account::factory()->for($owner))->create(['amount' => 500])->id,
         ]),
+        'subscription' => Subscription::factory()->for($owner)->create(),
+        'subscription_suggestion' => SubscriptionSuggestion::query()->forceCreate([
+            'user_id' => $owner->id, 'match_key' => 'description:owner', 'name' => 'Owner', 'description_match' => 'owner',
+            'amount' => 500, 'interval' => 'monthly', 'next_date' => '2026-11-01', 'transaction_ids' => [],
+        ]),
     ];
     $before = $rows[$model]->fresh()->toArray();
     $own = Transaction::factory()->for($this->account)->create(['amount' => 500]);
+    $mine = Subscription::factory()->for($this->user)->create();
 
     $arguments = array_map(fn (mixed $value): mixed => match ($value) {
         'own' => $own->id,
+        'mine' => $mine->id,
         'id' => $rows[$model]->getKey(),
         default => $value,
     }, $arguments);
-    $label = ['suggestion' => 'transfer suggestion', 'batch' => 'import batch'][$model] ?? $model;
+    $label = ['suggestion' => 'transfer suggestion', 'batch' => 'import batch', 'subscription_suggestion' => 'subscription suggestion'][$model] ?? $model;
 
     financeMcp($this->user)->tool($tool, $arguments)
         ->assertHasErrors(["Not found: no {$label} with id {$rows[$model]->getKey()}."]);
@@ -176,6 +186,14 @@ test('another user\'s ids are not found and nothing of theirs changes', function
     'transfer_candidates' => [Finance\TransferCandidatesTool::class, 'transaction', ['transaction_id' => 'id']],
     'get_import_batch' => [Finance\GetImportBatchTool::class, 'batch', ['batch_id' => 'id']],
     'undo_import_batch' => [Finance\UndoImportBatchTool::class, 'batch', ['batch_id' => 'id']],
+    'confirm_subscription_suggestion' => [Finance\ConfirmSubscriptionSuggestionTool::class, 'subscription_suggestion', ['suggestion_id' => 'id']],
+    'dismiss_subscription_suggestion' => [Finance\DismissSubscriptionSuggestionTool::class, 'subscription_suggestion', ['suggestion_id' => 'id']],
+    'create_subscription from their transaction' => [Finance\CreateSubscriptionTool::class, 'transaction', ['transaction_id' => 'id']],
+    'update_subscription' => [Finance\UpdateSubscriptionTool::class, 'subscription', ['subscription_id' => 'id', 'name' => 'Mine']],
+    'cancel_subscription' => [Finance\CancelSubscriptionTool::class, 'subscription', ['subscription_id' => 'id']],
+    'link_subscription_transaction to their subscription' => [Finance\LinkSubscriptionTransactionTool::class, 'subscription', ['subscription_id' => 'id', 'transaction_id' => 'own']],
+    'link_subscription_transaction with their transaction' => [Finance\LinkSubscriptionTransactionTool::class, 'transaction', ['subscription_id' => 'mine', 'transaction_id' => 'id']],
+    'unlink_subscription_transaction' => [Finance\UnlinkSubscriptionTransactionTool::class, 'transaction', ['transaction_id' => 'id']],
 ]);
 
 test('list tools return only the token user\'s rows', function () {
@@ -196,6 +214,9 @@ test('list tools return only the token user\'s rows', function () {
     $mcp->tool(Finance\ListRulesTool::class)->assertStructuredContent(['rules' => []]);
     $mcp->tool(Finance\ListImportBatchesTool::class)->assertStructuredContent(['batches' => []]);
     $mcp->tool(Finance\ListTransferSuggestionsTool::class)->assertStructuredContent(['suggestions' => []]);
+    Subscription::factory()->for($owner)->create(['name' => 'Their subscription']);
+    $mcp->tool(Finance\ListSubscriptionsTool::class)->assertStructuredContent(['subscriptions' => [], 'monthly_total' => 0, 'monthly_total_chf' => 'CHF 0.00', 'suggestions' => []]);
+    $mcp->tool(Finance\GetDashboardSummaryTool::class, ['month' => '2026-10'])->assertDontSee(['Theirs', 'Their subscription']);
     $mcp->tool(Finance\PreviewRuleMatchesTool::class, ['conditions' => [['field' => 'description', 'operator' => 'contains', 'value' => 'coffee']]])
         ->assertStructuredContent(['count' => 0, 'sample' => []]);
 });
@@ -412,6 +433,49 @@ test('transfers are found, suggested, confirmed, dismissed, paired, unpaired, ma
     $lone = $tieIn->firstWhere('id', '!=', $suggestions[0]->inflow_id);
     $mcp->tool(Finance\MarkTransferTool::class, ['transaction_id' => $lone->id])->assertSee('"is_transfer":true');
     expect($lone->fresh()->transfer_source)->toBe(TransferSource::Manual);
+});
+
+test('subscriptions are detected, confirmed, dismissed, created from a charge, edited, linked, unlinked and cancelled', function () {
+    $this->travelTo('2026-10-28 12:00:00');
+    foreach (['2026-08-03', '2026-09-03', '2026-10-03'] as $date) {
+        Transaction::factory()->for($this->account)->create(['date' => $date, 'description' => 'STREAMFLIX', 'amount' => -1590]);
+        Transaction::factory()->for($this->account)->create(['date' => $date, 'description' => 'Gym', 'amount' => -4900]);
+    }
+    $hetzner = Transaction::factory()->for($this->account)->create(['date' => '2026-09-27', 'description' => 'Hetzner Online', 'amount' => -1042]);
+    Transaction::factory()->for($this->account)->create(['date' => '2026-10-27', 'description' => 'Hetzner Online', 'amount' => -1009, 'status' => TransactionStatus::Pending]);
+    $mcp = financeMcp($this->user);
+
+    $mcp->tool(Finance\DetectSubscriptionsTool::class)->assertStructuredContent(['suggested' => 2]);
+    $suggestions = SubscriptionSuggestion::query()->ownedBy($this->user)->orderBy('match_key')->get();
+    $mcp->tool(Finance\ListSubscriptionsTool::class)->assertStructuredContent(fn (AssertableJson $json) => $json
+        ->has('suggestions', 2)->where('suggestions.0.amount_chf', 'CHF 15.90')->has('suggestions.0.charges', 3)->etc());
+
+    $mcp->tool(Finance\DismissSubscriptionSuggestionTool::class, ['suggestion_id' => $suggestions[0]->id])->assertOk();
+    $mcp->tool(Finance\ConfirmSubscriptionSuggestionTool::class, ['suggestion_id' => $suggestions[1]->id])->assertStructuredContent(fn (AssertableJson $json) => $json
+        ->where('subscription.source', 'detected')->where('subscription.next_date', '2026-11-03')->where('subscription.payments_count', 3)->etc());
+    $mcp->tool(Finance\DismissSubscriptionSuggestionTool::class, ['suggestion_id' => $suggestions[0]->id])->assertHasErrors(['Not found']);
+
+    $mcp->tool(Finance\CreateSubscriptionTool::class, ['transaction_id' => $hetzner->id])->assertStructuredContent(fn (AssertableJson $json) => $json
+        ->where('subscription.name', 'Hetzner Online')->where('subscription.description_match', 'hetzner online')->where('subscription.amount', 1042)
+        ->where('subscription.next_date', '2026-11-27')->where('subscription.payments_count', 2)->etc());
+    $mcp->tool(Finance\CreateSubscriptionTool::class, ['name' => 'Nothing', 'amount' => 500, 'interval' => 'monthly'])
+        ->assertHasErrors(['description_match: Give a payee or a description to match charges by.']);
+
+    $streamflix = Subscription::query()->where('source', 'detected')->sole();
+    $mcp->tool(Finance\UnlinkSubscriptionTransactionTool::class, ['transaction_id' => $hetzner->id])->assertOk();
+    $mcp->tool(Finance\LinkSubscriptionTransactionTool::class, ['subscription_id' => $streamflix->id, 'transaction_id' => $hetzner->id])->assertOk();
+    expect($hetzner->fresh()->subscription_id)->toBe($streamflix->id);
+    $mcp->tool(Finance\UpdateSubscriptionTool::class, ['subscription_id' => $streamflix->id, 'interval' => 'yearly', 'next_date' => '2027-10-03'])
+        ->assertStructuredContent(fn (AssertableJson $json) => $json->where('subscription.interval', 'yearly')->where('subscription.monthly_amount', 133)->etc());
+    $mcp->tool(Finance\CancelSubscriptionTool::class, ['subscription_id' => $streamflix->id])->assertStructuredContent(fn (AssertableJson $json) => $json
+        ->where('subscription.status', 'cancelled')->etc());
+
+    $mcp->tool(Finance\ListSubscriptionsTool::class, ['status' => 'active'])->assertStructuredContent(fn (AssertableJson $json) => $json
+        ->has('subscriptions', 1)->where('monthly_total', 1042)->etc());
+    $mcp->tool(Finance\GetDashboardSummaryTool::class, ['month' => '2026-10'])->assertStructuredContent(fn (AssertableJson $json) => $json
+        ->where('subscriptions.monthly_total', 1042)->where('subscriptions.monthly_total_chf', 'CHF 10.42')
+        ->where('spending.total', 1590 + 4900)->where('spending.categories.0.category', 'Uncategorized')
+        ->where('attention.subscription_suggestions', 0)->etc());
 });
 
 test('import_csv imports through saved mappings, skips re-imported rows and refuses an unmapped file', function () {

@@ -13,7 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $import_batch_id
  * @property string $subject_type `transaction` or `snapshot`
  * @property int $subject_id
- * @property string $action `created`, `updated` or `removed`
+ * @property string $action `created`, `updated`, `removed`, `paired` (transfer pairing changed a
+ *                          pre-existing transaction) or `subscribed` (it was linked to a subscription)
  * @property array<string, mixed>|null $before
  */
 #[Fillable(['subject_type', 'subject_id', 'action', 'before'])]

@@ -28,6 +28,8 @@ use Illuminate\Support\Carbon;
  *     categorized_by_rules?: int,
  *     paired_as_transfers?: int,
  *     transfer_suggestions?: int,
+ *     linked_to_subscriptions?: int,
+ *     subscription_suggestions?: int,
  *     accounts: list<array{account_id: int, account: string, mapping: string, created: int, updated: int, skipped_duplicate: int, skipped_currency: int, removed_reverted: int, skipped_reverted: int, snapshot: array{date: string, balance: int}|null}>,
  *     currency_rows: list<array{line: int, account: string, date: string, description: string, amount: string, currency: string}>
  * } $summary

@@ -8,6 +8,8 @@ use App\Models\Finance\Category;
 use App\Models\Finance\ImportBatch;
 use App\Models\Finance\Payee;
 use App\Models\Finance\Rule;
+use App\Models\Finance\Subscription;
+use App\Models\Finance\SubscriptionSuggestion;
 use App\Models\Finance\Transaction;
 use App\Models\Finance\TransferSuggestion;
 use App\Models\User;
@@ -79,7 +81,7 @@ final class Present
      */
     public static function transaction(Transaction $transaction): array
     {
-        $transaction->loadMissing(['account', 'category', 'payee', 'transferCounterpart.account']);
+        $transaction->loadMissing(['account', 'category', 'payee', 'transferCounterpart.account', 'subscription']);
         $counterpart = $transaction->transferCounterpart;
 
         return [
@@ -108,7 +110,75 @@ final class Present
                 'description' => $counterpart->description,
                 ...self::money('amount', $counterpart->amount),
             ],
+            'subscription_id' => $transaction->subscription_id,
+            'subscription' => $transaction->subscription?->name,
+            'subscription_source' => $transaction->subscription_source?->value,
             'import_batch_id' => $transaction->import_batch_id,
+        ];
+    }
+
+    /**
+     * A subscription with its monthly equivalent and, with `$payments`, its linked charges
+     * newest first.
+     *
+     * @return array<string, mixed>
+     */
+    public static function subscription(Subscription $subscription, bool $payments = true): array
+    {
+        $subscription->loadMissing(['payee', 'account']);
+
+        return [
+            'id' => $subscription->id,
+            'name' => $subscription->name,
+            'payee_id' => $subscription->payee_id,
+            'payee' => $subscription->payee?->name,
+            'description_match' => $subscription->description_match,
+            'account_id' => $subscription->account_id,
+            'account' => $subscription->account?->name,
+            ...self::money('amount', $subscription->amount),
+            'interval' => $subscription->interval->value,
+            ...self::money('monthly_amount', $subscription->monthlyAmount()),
+            'next_date' => $subscription->next_date,
+            'status' => $subscription->status->value,
+            'source' => $subscription->source->value,
+            'cancelled_at' => $subscription->cancelled_at?->toIso8601String(),
+            'payments_count' => $subscription->transactions()->count(),
+            ...($payments ? ['payments' => $subscription->transactions()->orderByDesc('date')->orderByDesc('time')->orderByDesc('id')->get()
+                ->map(fn (Transaction $charge): array => [
+                    'transaction_id' => $charge->id,
+                    'date' => $charge->date,
+                    'description' => $charge->description,
+                    ...self::money('amount', $charge->amount),
+                    'status' => $charge->status->value,
+                    'link_source' => $charge->subscription_source?->value,
+                ])->all()] : []),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function subscriptionSuggestion(SubscriptionSuggestion $suggestion): array
+    {
+        $suggestion->loadMissing(['payee', 'account']);
+
+        return [
+            'id' => $suggestion->id,
+            'name' => $suggestion->name,
+            'payee_id' => $suggestion->payee_id,
+            'payee' => $suggestion->payee?->name,
+            'description_match' => $suggestion->description_match,
+            'account' => $suggestion->account?->name,
+            ...self::money('amount', $suggestion->amount),
+            'interval' => $suggestion->interval->value,
+            ...self::money('monthly_amount', $suggestion->interval->monthly($suggestion->amount)),
+            'next_date' => $suggestion->next_date,
+            'charges' => $suggestion->charges()->map(fn (Transaction $charge): array => [
+                'transaction_id' => $charge->id,
+                'date' => $charge->date,
+                'description' => $charge->description,
+                ...self::money('amount', $charge->amount),
+            ])->all(),
         ];
     }
 

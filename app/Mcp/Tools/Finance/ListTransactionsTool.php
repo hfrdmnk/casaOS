@@ -39,6 +39,7 @@ class ListTransactionsTool extends FinanceTool
             'to' => $schema->string()->format('date')->description('Latest date, Y-m-d, inclusive.'),
             'search' => $schema->string()->max(200)->description('Case-insensitive text in the raw bank description or the payee name.'),
             'transfer' => $schema->string()->enum(['yes', 'no', 'suggested'])->description('`yes`: only transfers; `no`: no transfers; `suggested`: rows in an open transfer suggestion.'),
+            'subscription' => $schema->string()->pattern('^(any|none|\d+)$')->description('A subscription id (as a string), "any" for charges linked to a subscription, or "none".'),
             'page' => $schema->integer()->min(1)->default(1)->description('Page number, from 1.'),
             'per_page' => $schema->integer()->min(1)->max(200)->default(50)->description('Rows per page, at most 200.'),
         ];
@@ -48,7 +49,7 @@ class ListTransactionsTool extends FinanceTool
     {
         $input = $request->all();
 
-        foreach (['category', 'payee'] as $key) {
+        foreach (['category', 'payee', 'subscription'] as $key) {
             if (is_int($input[$key] ?? null)) {
                 $input[$key] = (string) $input[$key];
             }

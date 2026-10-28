@@ -2,6 +2,7 @@
 
 namespace App\Verification\Finance;
 
+use App\Actions\Finance\Dashboard\DashboardSummary;
 use App\Actions\Finance\Money;
 use App\Actions\Finance\Transfers\ManageTransfers;
 use App\Models\Finance\Account;
@@ -10,6 +11,9 @@ use App\Models\Finance\ImportBatch;
 use App\Models\Finance\ImportMapping;
 use App\Models\Finance\Payee;
 use App\Models\Finance\Rule;
+use App\Models\Finance\Subscription;
+use App\Models\Finance\SubscriptionStatus;
+use App\Models\Finance\SubscriptionSuggestion;
 use App\Models\Finance\Transaction;
 use App\Models\Finance\TransferSuggestion;
 use App\Models\User;
@@ -19,7 +23,8 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * The `finance` key of `verify:inspect`: accounts with balances and snapshots, transaction counts
  * by status and by who set their category and payee, transfers (counts by source, pairs and their
- * integrity, suggestions), categories, payees, rules, mappings and import batches. Money is shown
+ * integrity, suggestions), subscriptions and their suggestions, this month's dashboard figures,
+ * categories, payees, rules, mappings and import batches. Money is shown
  * both in Rappen and as CHF.
  */
 class FinanceInspector implements Inspector
@@ -64,6 +69,8 @@ class FinanceInspector implements Inspector
                 'with_fee' => Transaction::query()->ownedBy($user)->where('fee', '!=', 0)->count(),
             ],
             'transfers' => $this->transfers($user),
+            'subscriptions' => $this->subscriptions($user),
+            'dashboard' => $this->dashboard($user),
             'categories' => $user->categories()->orderBy('name')->pluck('name')->all(),
             'payees' => Payee::query()->ownedBy($user)->withCount('transactions')->orderBy('name')->get()
                 ->map(fn (Payee $payee): array => ['id' => $payee->id, 'name' => $payee->name, 'transactions' => $payee->transactions_count])->all(),
@@ -153,6 +160,85 @@ class FinanceInspector implements Inspector
     }
 
     /**
+     * Subscription counts by status and source, the monthly total, each subscription with its
+     * linked charges, and the open and dismissed suggestions.
+     *
+     * @return array<string, mixed>
+     */
+    private function subscriptions(User $user): array
+    {
+        $all = Subscription::query()->ownedBy($user)->orderBy('id')->get();
+        $active = $all->where('status', SubscriptionStatus::Active);
+        $suggestions = SubscriptionSuggestion::query()->ownedBy($user)->orderBy('id')->get();
+
+        return [
+            'total' => $all->count(),
+            'by_status' => $all->countBy(fn (Subscription $subscription): string => $subscription->status->value)->sortKeys()->all(),
+            'by_source' => $all->countBy(fn (Subscription $subscription): string => $subscription->source->value)->sortKeys()->all(),
+            'monthly_total' => Money::format($active->sum(fn (Subscription $subscription): int => $subscription->monthlyAmount())),
+            'linked_transactions' => Transaction::query()->ownedBy($user)->whereNotNull('subscription_id')->count(),
+            'link_source' => $this->countsBy(Transaction::query()->ownedBy($user)->whereNotNull('subscription_source'), 'subscription_source'),
+            'suggestions_open' => $suggestions->whereNull('dismissed_at')->count(),
+            'suggestions_dismissed' => $suggestions->whereNotNull('dismissed_at')->count(),
+            'list' => $all->map(fn (Subscription $subscription): array => [
+                'id' => $subscription->id,
+                'name' => $subscription->name,
+                'status' => $subscription->status->value,
+                'source' => $subscription->source->value,
+                'match' => $subscription->payee_id !== null ? "payee:{$subscription->payee_id}" : "description:{$subscription->description_match}",
+                'account_id' => $subscription->account_id,
+                'amount' => Money::format($subscription->amount),
+                'interval' => $subscription->interval->value,
+                'monthly' => Money::format($subscription->monthlyAmount()),
+                'next_date' => $subscription->next_date,
+                'payments' => $subscription->transactions()->orderBy('date')->orderBy('id')->get()->map(fn (Transaction $charge): array => [
+                    'id' => $charge->id,
+                    'date' => $charge->date,
+                    'description' => $charge->description,
+                    'amount' => Money::format($charge->amount),
+                    'status' => $charge->status->value,
+                    'link_source' => $charge->subscription_source?->value,
+                ])->all(),
+            ])->values()->all(),
+            'suggestions' => $suggestions->map(fn (SubscriptionSuggestion $suggestion): array => [
+                'id' => $suggestion->id,
+                'name' => $suggestion->name,
+                'match_key' => $suggestion->match_key,
+                'amount' => Money::format($suggestion->amount),
+                'interval' => $suggestion->interval->value,
+                'next_date' => $suggestion->next_date,
+                'charges' => count($suggestion->transaction_ids),
+                'dismissed' => $suggestion->dismissed_at !== null,
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * The dashboard figures for this month, as the dashboard and get_dashboard_summary compute
+     * them, in CHF.
+     *
+     * @return array<string, mixed>
+     */
+    private function dashboard(User $user): array
+    {
+        $summary = app(DashboardSummary::class)($user, today()->format('Y-m'));
+
+        return [
+            'month' => $summary['spending']['month'],
+            'net_worth' => Money::format($summary['net_worth']['total']),
+            'stale_since' => $summary['net_worth']['stale_since'],
+            'accounts_by_type' => collect($summary['account_groups'])->mapWithKeys(fn (array $group): array => [$group['type'] => Money::format($group['total'])])->all(),
+            'accounts_flagged' => collect($summary['account_groups'])->flatMap(fn (array $group): array => $group['accounts'])
+                ->filter(fn (array $account): bool => $account['mismatched_snapshots'] > 0)->pluck('name')->values()->all(),
+            'spending_total' => Money::format($summary['spending']['total']),
+            'spending_by_category' => collect($summary['spending']['categories'])->mapWithKeys(fn (array $row): array => [$row['category'] => Money::format($row['amount'])])->all(),
+            'upcoming' => array_map(fn (array $row): string => "{$row['next_date']} {$row['name']} ".Money::format($row['amount']), $summary['subscriptions']['upcoming']),
+            'monthly_recurring' => Money::format($summary['subscriptions']['monthly_total']),
+            'attention' => $summary['attention'],
+        ];
+    }
+
+    /**
      * @param  Builder<Transaction>  $query
      * @return array<string, int>
      */
@@ -163,7 +249,7 @@ class FinanceInspector implements Inspector
 
     /**
      * @param  Builder<Transaction>  $query
-     * @param  'status'|'category_source'|'payee_source'|'transfer_source'  $column
+     * @param  'status'|'category_source'|'payee_source'|'transfer_source'|'subscription_source'  $column
      * @return array<string, int>
      */
     private function countsBy(Builder $query, string $column): array

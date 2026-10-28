@@ -8,6 +8,10 @@ import { DataTable, Td, Th } from '@/components/finance/data-table';
 import { Money } from '@/components/finance/money';
 import { NativeSelect } from '@/components/finance/native-select';
 import { StatusBadge } from '@/components/finance/status-badge';
+import {
+    SubscriptionActions,
+    SubscriptionMarker,
+} from '@/components/finance/subscription';
 import { TransferActions, TransferMarker } from '@/components/finance/transfer';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
@@ -15,7 +19,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { index } from '@/routes/finance/transactions';
 import { index as transfers } from '@/routes/finance/transfers';
-import type { Option, Paginated, TransactionRow } from '@/types/finance';
+import type {
+    IntervalOption,
+    Option,
+    Paginated,
+    TransactionRow,
+} from '@/types/finance';
 
 type Filters = {
     account: string;
@@ -24,6 +33,7 @@ type Filters = {
     to: string;
     search: string;
     transfer: string;
+    subscription: string;
 };
 
 export default function Transactions({
@@ -33,6 +43,8 @@ export default function Transactions({
     accounts,
     categories,
     payees,
+    subscriptions,
+    intervals,
 }: {
     transactions: Paginated<TransactionRow>;
     filters: Filters;
@@ -40,6 +52,8 @@ export default function Transactions({
     accounts: Option[];
     categories: Option[];
     payees: Option[];
+    subscriptions: Option[];
+    intervals: IntervalOption[];
 }) {
     function applyFilters(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -103,7 +117,7 @@ export default function Transactions({
 
                 <form
                     onSubmit={applyFilters}
-                    className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7"
+                    className="grid gap-3 sm:grid-cols-2 lg:grid-cols-8"
                     aria-label="Filters"
                 >
                     <div className="grid gap-1 lg:col-span-2">
@@ -162,6 +176,28 @@ export default function Transactions({
                         </NativeSelect>
                     </div>
                     <div className="grid gap-1">
+                        <Label htmlFor="filter-subscription">
+                            Subscriptions
+                        </Label>
+                        <NativeSelect
+                            id="filter-subscription"
+                            name="subscription"
+                            defaultValue={filters.subscription}
+                        >
+                            <option value="">All transactions</option>
+                            <option value="any">Subscription payments</option>
+                            <option value="none">Not subscriptions</option>
+                            {subscriptions.map((subscription) => (
+                                <option
+                                    key={subscription.id}
+                                    value={subscription.id}
+                                >
+                                    {subscription.name}
+                                </option>
+                            ))}
+                        </NativeSelect>
+                    </div>
+                    <div className="grid gap-1">
                         <Label htmlFor="filter-from">From</Label>
                         <Input
                             id="filter-from"
@@ -179,7 +215,7 @@ export default function Transactions({
                             defaultValue={filters.to}
                         />
                     </div>
-                    <div className="flex gap-2 lg:col-span-7">
+                    <div className="flex gap-2 lg:col-span-8">
                         <Button type="submit">Apply filters</Button>
                         <Button variant="ghost" asChild>
                             <Link href={index()}>Clear</Link>
@@ -227,6 +263,9 @@ export default function Transactions({
                                                 {transaction.description}
                                             </div>
                                         )}
+                                        <SubscriptionMarker
+                                            transaction={transaction}
+                                        />
                                     </Td>
                                     <Td className="whitespace-nowrap text-muted-foreground">
                                         {transaction.account}
@@ -326,6 +365,11 @@ export default function Transactions({
                                         />
                                     </Td>
                                     <Td className="text-right whitespace-nowrap">
+                                        <SubscriptionActions
+                                            transaction={transaction}
+                                            subscriptions={subscriptions}
+                                            intervals={intervals}
+                                        />
                                         <TransferActions
                                             transaction={transaction}
                                         />

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Finance\Import;
 
+use App\Actions\Finance\Subscriptions\ManageSubscriptions;
 use App\Actions\Finance\Transfers\ManageTransfers;
 use App\Models\Finance\BalanceSnapshot;
 use App\Models\Finance\Category;
@@ -10,6 +11,8 @@ use App\Models\Finance\ImportBatch;
 use App\Models\Finance\ImportBatchChange;
 use App\Models\Finance\Payee;
 use App\Models\Finance\RuleActionType;
+use App\Models\Finance\Subscription;
+use App\Models\Finance\SubscriptionLinkSource;
 use App\Models\Finance\Transaction;
 use App\Models\Finance\TransferSource;
 use Illuminate\Database\Eloquent\Collection;
@@ -25,6 +28,11 @@ use Illuminate\Support\Facades\DB;
  * completed in place (which goes back to pending), is broken. The surviving side falls back to a
  * plain transaction when pairing made it a transfer (and gets back the category pairing cleared),
  * or stays a transfer without a counterpart when a rule or the user marked it.
+ *
+ * Subscriptions are never deleted: charges the batch created go with it, pre-existing charges it
+ * linked automatically are unlinked, and every subscription that lost or regained a charge gets
+ * its next expected date recomputed. Detection then runs again so no suggestion points at a
+ * removed charge.
  */
 final class UndoImportBatch
 {
@@ -38,7 +46,7 @@ final class UndoImportBatch
      */
     public const RULE_TRANSACTION_FIELDS = ['category_id', 'category_source', 'payee_id', 'payee_source', 'is_transfer', 'transfer_source', 'transfer_counterpart_id'];
 
-    public function __construct(private ManageTransfers $transfers) {}
+    public function __construct(private ManageTransfers $transfers, private ManageSubscriptions $subscriptions) {}
 
     /**
      * Batches are undone newest first per account: a batch that a later, still active batch built
@@ -60,14 +68,21 @@ final class UndoImportBatch
         DB::transaction(function () use ($batch): void {
             $changes = $batch->changes()->orderByDesc('id')->get();
             $this->breakPairs($changes);
+            $ids = $changes->where('subject_type', 'transaction')->pluck('subject_id');
+            $subscriptions = Transaction::query()->whereIn('id', $ids)->whereNotNull('subscription_id')->pluck('subscription_id')
+                ->merge($changes->where('action', 'removed')->pluck('before.subscription_id')->filter());
 
             $changes->each(fn (ImportBatchChange $change) => match ($change->subject_type) {
                 'transaction' => $this->revertTransaction($change),
                 default => $this->revertSnapshot($change),
             });
 
+            Subscription::query()->whereIn('id', $subscriptions->unique()->values())->get()
+                ->each(fn (Subscription $subscription) => $this->subscriptions->refreshNextDate($subscription));
+
             $batch->changes()->delete();
             $batch->forceFill(['undone_at' => now()])->save();
+            $this->subscriptions->detect($batch->user);
         });
     }
 
@@ -98,6 +113,8 @@ final class UndoImportBatch
             'created' => Transaction::query()->whereKey($change->subject_id)->delete(),
             'updated' => Transaction::query()->whereKey($change->subject_id)->update($this->updatedFields($change->subject_id, $before)),
             'paired' => $this->revertPaired($change->subject_id, $before),
+            'subscribed' => Transaction::query()->whereKey($change->subject_id)->where('subscription_source', SubscriptionLinkSource::Auto)
+                ->update(['subscription_id' => $before['subscription_id'] ?? null, 'subscription_source' => $before['subscription_source'] ?? null]),
             default => Transaction::query()->insert([
                 ...$before,
                 ...$this->existingReference($before, 'category_id', 'category_source', Category::class),

@@ -8,6 +8,7 @@ use App\Http\Controllers\Finance\ImportController;
 use App\Http\Controllers\Finance\ImportMappingController;
 use App\Http\Controllers\Finance\PayeeController;
 use App\Http\Controllers\Finance\RuleController;
+use App\Http\Controllers\Finance\SubscriptionController;
 use App\Http\Controllers\Finance\TransactionController;
 use App\Http\Controllers\Finance\TransferController;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +38,17 @@ Route::middleware(['auth'])->prefix('finance')->name('finance.')->group(function
     Route::post('transfers/find', [TransferController::class, 'find'])->name('transfers.find');
     Route::post('transfers/suggestions/{suggestion}/confirm', [TransferController::class, 'confirm'])->name('transfers.confirm');
     Route::post('transfers/suggestions/{suggestion}/dismiss', [TransferController::class, 'dismiss'])->name('transfers.dismiss');
+
+    Route::post('transactions/{transaction}/subscription', [SubscriptionController::class, 'link'])->name('transactions.link-subscription');
+    Route::delete('transactions/{transaction}/subscription', [SubscriptionController::class, 'unlink'])->name('transactions.unlink-subscription');
+
+    Route::get('subscriptions', [SubscriptionController::class, 'index'])->name('subscriptions.index');
+    Route::post('subscriptions', [SubscriptionController::class, 'store'])->name('subscriptions.store');
+    Route::post('subscriptions/detect', [SubscriptionController::class, 'detect'])->name('subscriptions.detect');
+    Route::patch('subscriptions/{subscription}', [SubscriptionController::class, 'update'])->name('subscriptions.update');
+    Route::post('subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+    Route::post('subscriptions/suggestions/{suggestion}/confirm', [SubscriptionController::class, 'confirm'])->name('subscriptions.confirm');
+    Route::post('subscriptions/suggestions/{suggestion}/dismiss', [SubscriptionController::class, 'dismiss'])->name('subscriptions.dismiss');
 
     Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
     Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
