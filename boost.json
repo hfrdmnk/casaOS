@@ -16,6 +16,7 @@
         "wayfinder-development",
         "inertia-react-development",
         "tailwindcss-development",
-        "verify-casaos"
+        "verify-casaos",
+        "maintain-verification-skill"
     ]
 }
