@@ -44,6 +44,7 @@ export default function Transactions({
     categories,
     payees,
     subscriptions,
+    cancelled_subscriptions,
     intervals,
 }: {
     transactions: Paginated<TransactionRow>;
@@ -53,6 +54,7 @@ export default function Transactions({
     categories: Option[];
     payees: Option[];
     subscriptions: Option[];
+    cancelled_subscriptions: Option[];
     intervals: IntervalOption[];
 }) {
     function applyFilters(event: FormEvent<HTMLFormElement>) {
@@ -195,6 +197,20 @@ export default function Transactions({
                                     {subscription.name}
                                 </option>
                             ))}
+                            {cancelled_subscriptions.length > 0 && (
+                                <optgroup label="Cancelled">
+                                    {cancelled_subscriptions.map(
+                                        (subscription) => (
+                                            <option
+                                                key={subscription.id}
+                                                value={subscription.id}
+                                            >
+                                                {subscription.name}
+                                            </option>
+                                        ),
+                                    )}
+                                </optgroup>
+                            )}
                         </NativeSelect>
                     </div>
                     <div className="grid gap-1">

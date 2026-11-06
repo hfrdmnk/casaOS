@@ -192,6 +192,11 @@ test('linking by hand moves the next date, unlinking sticks, and cancelling stop
     $this->post(route('finance.subscriptions.cancel', $subscription))->assertRedirect();
     expect($subscription->fresh()->status)->toBe(SubscriptionStatus::Cancelled);
 
+    $this->get(route('finance.transactions.index', ['subscription' => $subscription->id]))->assertInertia(fn ($page) => $page
+        ->where('filters.subscription', (string) $subscription->id)
+        ->where('subscriptions', [])
+        ->where('cancelled_subscriptions', [['id' => $subscription->id, 'name' => $subscription->name]]));
+
     ImportMapping::factory()->for($this->account)->create();
     importCsv("Date,Description,Amount\n2026-11-12,Fitness voucher,-60.00\n");
     expect($subscription->fresh()->transactions()->count())->toBe(0);

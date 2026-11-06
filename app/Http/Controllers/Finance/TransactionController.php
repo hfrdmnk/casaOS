@@ -12,6 +12,7 @@ use App\Models\Finance\Category;
 use App\Models\Finance\Payee;
 use App\Models\Finance\Subscription;
 use App\Models\Finance\SubscriptionInterval;
+use App\Models\Finance\SubscriptionStatus;
 use App\Models\Finance\Transaction;
 use App\Models\Finance\TransferSuggestion;
 use App\Models\User;
@@ -60,6 +61,8 @@ class TransactionController extends Controller
             'categories' => self::categoryOptions($user),
             'payees' => self::payeeOptions($user),
             'subscriptions' => Subscription::query()->ownedBy($user)->active()->orderBy('name')->get(['id', 'name'])
+                ->map(fn (Subscription $subscription): array => ['id' => $subscription->id, 'name' => $subscription->name])->all(),
+            'cancelled_subscriptions' => Subscription::query()->ownedBy($user)->where('status', SubscriptionStatus::Cancelled)->orderBy('name')->get(['id', 'name'])
                 ->map(fn (Subscription $subscription): array => ['id' => $subscription->id, 'name' => $subscription->name])->all(),
             'intervals' => SubscriptionInterval::options(),
         ]);
