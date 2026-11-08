@@ -27,7 +27,6 @@ class AccountInspector implements Inspector
             'created_at' => $user->created_at?->toIso8601String(),
             'updated_at' => $user->updated_at?->toIso8601String(),
             'sessions' => DB::table('sessions')->where('user_id', $user->id)->count(),
-            'password_reset_pending' => DB::table('password_reset_tokens')->where('email', $user->email)->exists(),
             'passkeys' => $user->passkeys()->pluck('name')->all(),
             'api_tokens' => $user->tokens()->orderBy('id')->get()->map(fn (PersonalAccessToken $token): array => [
                 'id' => $token->id,

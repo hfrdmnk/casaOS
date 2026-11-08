@@ -75,7 +75,6 @@ class Cleanup extends VerifyCommand
             DB::transaction(function () use ($users): void {
                 foreach ($users as $user) {
                     DB::table('sessions')->where('user_id', $user->id)->delete();
-                    DB::table('password_reset_tokens')->where('email', $user->email)->delete();
                     $user->delete();
                 }
             });

@@ -8,7 +8,6 @@ Help article: none
 
 - `login-form` email and password login.
 - `login-wrong-password` wrong credentials show `These credentials do not match our records.`.
-- `login-forgot-link` `Forgot your password?` links to `/forgot-password`.
 - `logout` the user menu `Log out` item ends the session.
 
 ## How to reach it

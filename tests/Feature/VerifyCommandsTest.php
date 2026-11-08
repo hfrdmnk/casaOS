@@ -2,10 +2,12 @@
 
 use App\Models\User;
 use App\Verification\Scenario;
+use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
@@ -96,16 +98,17 @@ test('the login url is refused when tampered with or pointing at a non-scenario 
 test('mail sent to a scenario address is captured for verify:mail', function () {
     $scenario = verifyJson('verify:scenario');
 
-    $this->post('/forgot-password', ['email' => $scenario['email']])->assertSessionHasNoErrors();
+    Mail::raw('Open http://localhost/settings/profile to continue.', fn (Message $message) => $message
+        ->to($scenario['email'])
+        ->subject('Scenario mail'));
+    Mail::raw('Not for the scenario.', fn (Message $message) => $message->to('owner@example.com'));
 
     $mail = verifyJson('verify:mail', ['scenario' => $scenario['scenario'], '--latest' => true]);
 
     expect($mail['count'])->toBe(1)
         ->and($mail['messages'][0]['to'])->toBe([$scenario['email']])
-        ->and($mail['messages'][0]['subject'])->toBe('Reset your password')
-        ->and(collect($mail['messages'][0]['links'])->filter(fn (string $link) => str_contains($link, '/reset-password/'))->values()->all())
-        ->toHaveCount(1)
-        ->each->toMatch('#^http://localhost(:\d+)?/reset-password/[0-9a-f]{64}\?email=verify-[a-z0-9]{8}%40casaos\.test$#');
+        ->and($mail['messages'][0]['subject'])->toBe('Scenario mail')
+        ->and($mail['messages'][0]['links'])->toBe(['http://localhost/settings/profile']);
 });
 
 test('cleanup removes the scenario user, sessions and mail but never other users', function () {

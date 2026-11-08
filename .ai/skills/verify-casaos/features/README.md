@@ -34,10 +34,9 @@ MCP (an agent with a bearer token):
 
 - [Finance MCP server](./finance-mcp.md): `POST /mcp/finance`, 47 tools and the `categorize_transactions` prompt, ability enforcement, per-user scoping.
 
-Public pages and email:
+Public pages:
 
 - [Log in and log out](./login.md): `/login` form, remember me, throttle, `Log out` menu item.
-- [Password reset](./password-reset.md): `/forgot-password`, reset email, `/reset-password/{token}`.
 
 CLI:
 
