@@ -23,6 +23,7 @@ class DashboardController extends Controller
 
         return Inertia::render('dashboard', [
             'summary' => $summary($user, $month),
+            'netWorthHistory' => $summary->netWorthHistory($user),
         ]);
     }
 }

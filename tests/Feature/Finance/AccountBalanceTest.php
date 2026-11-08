@@ -39,6 +39,26 @@ test('imports followed by today\'s balance work backwards from the snapshot', fu
         ->and($this->account->balanceOn('2026-10-01'))->toBe(23500);
 });
 
+test('the account page charts the balance of every day from its first activity, each from the nearest snapshot', function () {
+    $this->travelTo('2026-10-06 12:00:00');
+    BalanceSnapshot::factory()->for($this->account)->create(['date' => '2026-10-01', 'balance' => 10000]);
+    BalanceSnapshot::factory()->for($this->account)->create(['date' => '2026-10-05', 'balance' => 50000]);
+    transactionsOn($this->account, [['2026-09-30', -300], ['2026-10-02', 1000], ['2026-10-04', -500], ['2026-10-06', 200]]);
+    Transaction::factory()->for($this->account)->pending()->create(['date' => '2026-10-03', 'amount' => -9000]);
+
+    $this->get(route('finance.accounts.show', $this->account))
+        ->assertInertia(fn ($page) => $page->where('history', [
+            ['date' => '2026-09-30', 'balance' => 10000],
+            ['date' => '2026-10-01', 'balance' => 10000],
+            ['date' => '2026-10-02', 'balance' => 11000],
+            // Two days from both snapshots: the earlier one wins.
+            ['date' => '2026-10-03', 'balance' => 11000],
+            ['date' => '2026-10-04', 'balance' => 50000],
+            ['date' => '2026-10-05', 'balance' => 50000],
+            ['date' => '2026-10-06', 'balance' => 50200],
+        ]));
+});
+
 test('pending transactions are not part of the balance', function () {
     BalanceSnapshot::factory()->for($this->account)->create(['date' => '2026-10-01', 'balance' => 10000]);
     Transaction::factory()->for($this->account)->pending()->create(['date' => '2026-10-02', 'amount' => -500]);

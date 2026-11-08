@@ -3,6 +3,7 @@ import { AlertTriangle, Archive, ArchiveRestore, Pencil } from 'lucide-react';
 import AccountController from '@/actions/App/Http/Controllers/Finance/AccountController';
 import BalanceSnapshotController from '@/actions/App/Http/Controllers/Finance/BalanceSnapshotController';
 import { AccountFormFields } from '@/components/finance/account-form-fields';
+import { BalanceChart } from '@/components/finance/balance-chart';
 import { DataTable, Td, Th } from '@/components/finance/data-table';
 import { Money } from '@/components/finance/money';
 import { StatusBadge } from '@/components/finance/status-badge';
@@ -28,6 +29,7 @@ import { index as transactionsIndex } from '@/routes/finance/transactions';
 import type {
     AccountSummary,
     AccountTypeOption,
+    BalancePoint,
     Option,
     TransactionRow,
 } from '@/types/finance';
@@ -43,12 +45,14 @@ type SnapshotRow = {
 
 export default function ShowAccount({
     account,
+    history,
     types,
     snapshots,
     mappings,
     recentTransactions,
 }: {
     account: AccountSummary;
+    history: BalancePoint[];
     types: AccountTypeOption[];
     snapshots: SnapshotRow[];
     mappings: Option[];
@@ -160,6 +164,8 @@ export default function ShowAccount({
                         </p>
                     </div>
                 </div>
+
+                <BalanceChart history={history} />
 
                 {account.mismatched_snapshots > 0 && (
                     <div

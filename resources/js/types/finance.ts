@@ -19,6 +19,9 @@ export type AccountSummary = {
     mismatched_snapshots: number;
 };
 
+/** A balance at the end of a day, in Rappen. */
+export type BalancePoint = { date: string; balance: number };
+
 export type TransactionRow = {
     id: number;
     account_id: number;

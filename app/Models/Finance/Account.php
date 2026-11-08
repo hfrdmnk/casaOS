@@ -3,6 +3,7 @@
 namespace App\Models\Finance;
 
 use App\Models\Concerns\BelongsToUser;
+use Carbon\CarbonPeriod;
 use Database\Factories\Finance\AccountFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -72,22 +73,82 @@ class Account extends Model
      */
     public function balanceOn(string $date): int
     {
-        $day = Carbon::parse($date);
+        return $this->dailyBalances($date, $date)[$date];
+    }
 
-        $nearest = $this->snapshots()->get()
-            ->sortBy([
-                fn (BalanceSnapshot $a, BalanceSnapshot $b): int => abs((int) Carbon::parse($a->date)->diffInDays($day)) <=> abs((int) Carbon::parse($b->date)->diffInDays($day)),
-                fn (BalanceSnapshot $a, BalanceSnapshot $b): int => $a->date <=> $b->date,
-            ])
-            ->first();
+    /**
+     * The balance at the end of every day from one day to another (Y-m-d, both inclusive), keyed
+     * by day. Each day uses its nearest snapshot (the earlier one on a tie), as balanceOn() does.
+     *
+     * @return array<string, int>
+     */
+    public function dailyBalances(string $from, string $to): array
+    {
+        $snapshots = $this->snapshots()->orderBy('date')->get(['date', 'balance'])->all();
+        $dates = [];
+        $runningTotals = [];
+        $running = 0;
 
-        if ($nearest === null) {
-            return $this->completedTotal(null, $date);
+        foreach ($this->transactions()->where('status', TransactionStatus::Completed)->toBase()
+            ->selectRaw('date, sum(amount) as amount')->groupBy('date')->orderBy('date')->get() as $row) {
+            $dates[] = (string) $row->date;
+            $runningTotals[] = $running += (int) $row->amount;
         }
 
-        return $nearest->date <= $date
-            ? $nearest->balance + $this->completedTotal($nearest->date, $date)
-            : $nearest->balance - $this->completedTotal($date, $nearest->date);
+        $completedUpTo = function (string $day) use ($dates, $runningTotals): int {
+            $low = 0;
+            $high = count($dates) - 1;
+            $total = 0;
+
+            while ($low <= $high) {
+                $middle = intdiv($low + $high, 2);
+
+                if ($dates[$middle] <= $day) {
+                    $total = $runningTotals[$middle];
+                    $low = $middle + 1;
+                } else {
+                    $high = $middle - 1;
+                }
+            }
+
+            return $total;
+        };
+
+        $balances = [];
+        $next = 0;
+
+        foreach (CarbonPeriod::create($from, $to) as $date) {
+            $day = $date->toDateString();
+
+            while ($next < count($snapshots) && $snapshots[$next]->date <= $day) {
+                $next++;
+            }
+
+            $before = $snapshots[$next - 1] ?? null;
+            $after = $snapshots[$next] ?? null;
+            $nearest = $before === null || ($after !== null && $date->diffInDays($after->date) < Carbon::parse($before->date)->diffInDays($date))
+                ? $after
+                : $before;
+
+            $balances[$day] = $nearest === null
+                ? $completedUpTo($day)
+                : $nearest->balance + $completedUpTo($day) - $completedUpTo($nearest->date);
+        }
+
+        return $balances;
+    }
+
+    /**
+     * The day of the earliest snapshot or completed transaction, null when the account has neither.
+     */
+    public function firstActivityDate(): ?string
+    {
+        $dates = array_filter([
+            $this->snapshots()->min('date'),
+            $this->transactions()->where('status', TransactionStatus::Completed)->min('date'),
+        ]);
+
+        return $dates === [] ? null : (string) min($dates);
     }
 
     /**

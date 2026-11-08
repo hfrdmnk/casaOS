@@ -54,9 +54,12 @@ class AccountController extends Controller
     public function show(Account $account): Response
     {
         $account->loadCount('transactions');
+        $from = $account->firstActivityDate();
+        $balances = $from === null ? [] : $account->dailyBalances($from, today()->toDateString());
 
         return Inertia::render('finance/accounts/show', [
             'account' => self::summary($account),
+            'history' => array_map(fn (string $date, int $balance): array => ['date' => $date, 'balance' => $balance], array_keys($balances), $balances),
             'types' => AccountType::options(),
             'snapshots' => array_reverse(array_map(fn (array $row): array => [
                 'id' => $row['snapshot']->id,

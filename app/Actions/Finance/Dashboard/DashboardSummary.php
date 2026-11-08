@@ -119,6 +119,33 @@ final class DashboardSummary
     }
 
     /**
+     * Net worth at the end of every day, from the first snapshot or completed transaction of any
+     * non-archived account up to today. Empty without such activity.
+     *
+     * @return list<array{date: string, balance: int}>
+     */
+    public function netWorthHistory(User $user): array
+    {
+        $accounts = Account::query()->ownedBy($user)->active()->get();
+        $from = $accounts->map(fn (Account $account): ?string => $account->firstActivityDate())->filter()->min();
+
+        if ($from === null) {
+            return [];
+        }
+
+        $today = today()->toDateString();
+        $totals = [];
+
+        foreach ($accounts as $account) {
+            foreach ($account->dailyBalances($from, $today) as $date => $balance) {
+                $totals[$date] = ($totals[$date] ?? 0) + $balance;
+            }
+        }
+
+        return array_map(fn (string $date, int $balance): array => ['date' => $date, 'balance' => $balance], array_keys($totals), $totals);
+    }
+
+    /**
      * @param  string  $month  Y-m
      * @return array{month: string, from: string, to: string, total: int, categories: list<array{category_id: int|null, category: string, amount: int, count: int}>}
      */

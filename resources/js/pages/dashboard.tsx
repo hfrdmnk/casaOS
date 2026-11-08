@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { ArrowRight, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Fragment, useState } from 'react';
+import { BalanceChart } from '@/components/finance/balance-chart';
 import { Button } from '@/components/ui/button';
 import { formatAmount, formatMoney } from '@/lib/money';
 import { cn } from '@/lib/utils';
@@ -14,7 +15,7 @@ import { index as importPage } from '@/routes/finance/import';
 import { index as subscriptionsIndex } from '@/routes/finance/subscriptions';
 import { index as transactionsIndex } from '@/routes/finance/transactions';
 import { index as transfersIndex } from '@/routes/finance/transfers';
-import type { DashboardSummary } from '@/types/finance';
+import type { BalancePoint, DashboardSummary } from '@/types/finance';
 
 /**
  * Categories have no stored colour, so each gets a hue from its id. All hues
@@ -69,7 +70,13 @@ function share(amount: number, total: number): string {
     return `${total === 0 ? 0 : Math.round((amount / total) * 100)}%`;
 }
 
-export default function Dashboard({ summary }: { summary: DashboardSummary }) {
+export default function Dashboard({
+    summary,
+    netWorthHistory,
+}: {
+    summary: DashboardSummary;
+    netWorthHistory: BalancePoint[];
+}) {
     return (
         <>
             <Head title="Dashboard" />
@@ -82,7 +89,7 @@ export default function Dashboard({ summary }: { summary: DashboardSummary }) {
                 })}
             </p>
             {summary.has_accounts ? (
-                <Overview summary={summary} />
+                <Overview summary={summary} history={netWorthHistory} />
             ) : (
                 <EmptyState />
             )}
@@ -156,7 +163,13 @@ const asideLink =
 const rowLink =
     '-mx-2 grid h-11 items-center gap-3 border-t px-2 transition-colors duration-150 hover:bg-accent';
 
-function Overview({ summary }: { summary: DashboardSummary }) {
+function Overview({
+    summary,
+    history,
+}: {
+    summary: DashboardSummary;
+    history: BalancePoint[];
+}) {
     const { net_worth, account_groups, spending, subscriptions, attention } =
         summary;
     const [highlighted, setHighlighted] = useState<string | null>(null);
@@ -421,6 +434,9 @@ function Overview({ summary }: { summary: DashboardSummary }) {
                         CHF
                     </span>
                 </p>
+                <div className="mt-6">
+                    <BalanceChart history={history} />
+                </div>
                 {net_worth.stale_since && (
                     <p
                         className="mt-3 text-[13px] text-warning"

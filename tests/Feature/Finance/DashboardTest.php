@@ -101,6 +101,33 @@ test('the dashboard adds up net worth, spending, subscriptions and what needs at
     $this->get(route('dashboard', ['month' => '2026-13']))->assertSessionHasErrors('month');
 });
 
+test('net worth history adds up every active account per day from the first activity to today', function () {
+    $current = Account::factory()->for($this->user)->create();
+    $savings = Account::factory()->for($this->user)->type(AccountType::Savings)->create();
+    $archived = Account::factory()->for($this->user)->create(['archived_at' => now()]);
+
+    BalanceSnapshot::factory()->for($current)->create(['date' => '2026-10-20', 'balance' => 10000]);
+    Transaction::factory()->for($current)->create(['date' => '2026-10-25', 'amount' => -2000]);
+    // Savings has no snapshot, so it starts at zero.
+    Transaction::factory()->for($savings)->create(['date' => '2026-10-26', 'amount' => 5000]);
+    // Older than any active account's activity, but archived: neither counted nor where the history starts.
+    BalanceSnapshot::factory()->for($archived)->create(['date' => '2026-10-01', 'balance' => 999900]);
+
+    $this->get(route('dashboard'))->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('summary.net_worth.total', 13000)
+        ->where('netWorthHistory', [
+            ['date' => '2026-10-20', 'balance' => 10000],
+            ['date' => '2026-10-21', 'balance' => 10000],
+            ['date' => '2026-10-22', 'balance' => 10000],
+            ['date' => '2026-10-23', 'balance' => 10000],
+            ['date' => '2026-10-24', 'balance' => 10000],
+            ['date' => '2026-10-25', 'balance' => 8000],
+            ['date' => '2026-10-26', 'balance' => 13000],
+            ['date' => '2026-10-27', 'balance' => 13000],
+            ['date' => '2026-10-28', 'balance' => 13000],
+        ]));
+});
+
 test('another user\'s rows never reach the dashboard', function () {
     $other = User::factory()->create();
     $account = Account::factory()->for($other)->create();
@@ -110,6 +137,7 @@ test('another user\'s rows never reach the dashboard', function () {
 
     $this->get(route('dashboard'))->assertInertia(fn (AssertableInertia $page) => $page
         ->where('summary.has_accounts', false)
+        ->where('netWorthHistory', [])
         ->where('summary.spending.total', 0)
         ->where('summary.subscriptions.monthly_total', 0)
         ->where('summary.attention.uncategorized', 0));
