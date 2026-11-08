@@ -131,6 +131,7 @@ export default function EditRule({
         })),
     );
     const [processing, setProcessing] = useState(false);
+    const [previewFailed, setPreviewFailed] = useState(false);
     const preview = useHttp<
         { conditions: ReturnType<typeof payloadCondition>[] },
         Preview
@@ -150,7 +151,10 @@ export default function EditRule({
 
     useEffect(() => {
         if (preview.data.conditions.length > 0) {
-            preview.post(RuleController.matches.url()).catch(() => {});
+            preview
+                .post(RuleController.matches.url())
+                .then(() => setPreviewFailed(false))
+                .catch(() => setPreviewFailed(true));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [preview.data]);
@@ -223,408 +227,438 @@ export default function EditRule({
     return (
         <>
             <Head title={rule ? 'Edit rule' : 'New rule'} />
-            <div className="grid gap-8 p-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                <form onSubmit={save} className="space-y-6" aria-label="Rule">
-                    <Heading
-                        title={rule ? 'Edit rule' : 'New rule'}
-                        description="Conditions compare descriptions case-insensitively. Amounts are in CHF and signed: spending is negative."
-                    />
+            <div className="space-y-16">
+                <Heading
+                    title={rule ? 'Edit rule' : 'New rule'}
+                    description="Conditions compare descriptions case-insensitively. Amounts are in CHF and signed: spending is negative."
+                />
+                <div className="grid gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                    <form
+                        onSubmit={save}
+                        className="space-y-6"
+                        aria-label="Rule"
+                    >
+                        <div className="grid gap-2">
+                            <Label htmlFor="rule-name">Name (optional)</Label>
+                            <Input
+                                id="rule-name"
+                                value={name}
+                                onChange={(event) =>
+                                    setName(event.target.value)
+                                }
+                                placeholder="e.g. Groceries"
+                            />
+                            <InputError message={errors.name} />
+                        </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="rule-name">Name (optional)</Label>
-                        <Input
-                            id="rule-name"
-                            value={name}
-                            onChange={(event) => setName(event.target.value)}
-                            placeholder="e.g. Groceries"
-                        />
-                        <InputError message={errors.name} />
-                    </div>
+                        <label className="flex items-center gap-2 text-sm">
+                            <input
+                                type="checkbox"
+                                className="size-4"
+                                checked={enabled}
+                                onChange={(event) =>
+                                    setEnabled(event.target.checked)
+                                }
+                            />
+                            Enabled
+                        </label>
 
-                    <label className="flex items-center gap-2 text-sm">
-                        <input
-                            type="checkbox"
-                            className="size-4"
-                            checked={enabled}
-                            onChange={(event) =>
-                                setEnabled(event.target.checked)
-                            }
-                        />
-                        Enabled
-                    </label>
+                        <fieldset className="space-y-3">
+                            <legend className="mb-2 text-sm font-medium">
+                                If all of these match
+                            </legend>
+                            {conditions.map((condition, i) => {
+                                const field = FIELDS.find(
+                                    (item) => item.value === condition.field,
+                                );
+                                const n = i + 1;
 
-                    <fieldset className="space-y-3">
-                        <legend className="mb-2 text-sm font-medium">
-                            If all of these match
-                        </legend>
-                        {conditions.map((condition, i) => {
-                            const field = FIELDS.find(
-                                (item) => item.value === condition.field,
-                            );
-                            const n = i + 1;
-
-                            return (
-                                <div key={i} className="space-y-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <NativeSelect
-                                            aria-label={`Condition ${n} field`}
-                                            className="w-40"
-                                            value={condition.field}
-                                            onChange={(event) =>
-                                                updateCondition(i, {
-                                                    field: event.target
-                                                        .value as RuleCondition['field'],
-                                                })
-                                            }
-                                        >
-                                            {FIELDS.map((item) => (
-                                                <option
-                                                    key={item.value}
-                                                    value={item.value}
-                                                >
-                                                    {item.label}
-                                                </option>
-                                            ))}
-                                        </NativeSelect>
-                                        <NativeSelect
-                                            aria-label={`Condition ${n} operator`}
-                                            className="w-40"
-                                            value={condition.operator}
-                                            onChange={(event) =>
-                                                updateCondition(i, {
-                                                    operator: event.target
-                                                        .value as RuleCondition['operator'],
-                                                })
-                                            }
-                                        >
-                                            {field?.operators.map(
-                                                (operator) => (
-                                                    <option
-                                                        key={operator}
-                                                        value={operator}
-                                                    >
-                                                        {OPERATORS[operator]}
-                                                    </option>
-                                                ),
-                                            )}
-                                        </NativeSelect>
-                                        {condition.field === 'payee' ||
-                                        condition.field === 'account' ? (
+                                return (
+                                    <div key={i} className="space-y-1">
+                                        <div className="flex flex-wrap items-center gap-2">
                                             <NativeSelect
-                                                aria-label={`Condition ${n} value`}
-                                                className="w-48"
-                                                value={condition.value}
+                                                aria-label={`Condition ${n} field`}
+                                                className="w-40"
+                                                value={condition.field}
                                                 onChange={(event) =>
                                                     updateCondition(i, {
-                                                        value: event.target
-                                                            .value,
+                                                        field: event.target
+                                                            .value as RuleCondition['field'],
                                                     })
                                                 }
                                             >
-                                                <option value="">
-                                                    Choose…
-                                                </option>
-                                                {(condition.field === 'payee'
-                                                    ? options.payees
-                                                    : options.accounts
-                                                ).map((option) => (
+                                                {FIELDS.map((item) => (
                                                     <option
-                                                        key={option.id}
-                                                        value={option.id}
+                                                        key={item.value}
+                                                        value={item.value}
                                                     >
-                                                        {option.name}
+                                                        {item.label}
                                                     </option>
                                                 ))}
                                             </NativeSelect>
-                                        ) : (
-                                            <Input
-                                                aria-label={`Condition ${n} value`}
-                                                className="w-48 flex-1"
-                                                inputMode={
-                                                    isAmount(condition.field)
-                                                        ? 'decimal'
-                                                        : undefined
-                                                }
-                                                placeholder={
-                                                    isAmount(condition.field)
-                                                        ? 'CHF, e.g. -50.00'
-                                                        : ''
-                                                }
-                                                value={condition.value}
+                                            <NativeSelect
+                                                aria-label={`Condition ${n} operator`}
+                                                className="w-40"
+                                                value={condition.operator}
                                                 onChange={(event) =>
                                                     updateCondition(i, {
-                                                        value: event.target
-                                                            .value,
+                                                        operator: event.target
+                                                            .value as RuleCondition['operator'],
                                                     })
                                                 }
-                                            />
-                                        )}
-                                        {condition.operator === 'between' && (
-                                            <>
-                                                <span className="text-sm text-muted-foreground">
-                                                    and
-                                                </span>
-                                                <Input
-                                                    aria-label={`Condition ${n} upper value`}
-                                                    className="w-32"
-                                                    inputMode="decimal"
-                                                    value={condition.upper}
+                                            >
+                                                {field?.operators.map(
+                                                    (operator) => (
+                                                        <option
+                                                            key={operator}
+                                                            value={operator}
+                                                        >
+                                                            {
+                                                                OPERATORS[
+                                                                    operator
+                                                                ]
+                                                            }
+                                                        </option>
+                                                    ),
+                                                )}
+                                            </NativeSelect>
+                                            {condition.field === 'payee' ||
+                                            condition.field === 'account' ? (
+                                                <NativeSelect
+                                                    aria-label={`Condition ${n} value`}
+                                                    className="w-48"
+                                                    value={condition.value}
                                                     onChange={(event) =>
                                                         updateCondition(i, {
-                                                            upper: event.target
+                                                            value: event.target
+                                                                .value,
+                                                        })
+                                                    }
+                                                >
+                                                    <option value="">
+                                                        Choose…
+                                                    </option>
+                                                    {(condition.field ===
+                                                    'payee'
+                                                        ? options.payees
+                                                        : options.accounts
+                                                    ).map((option) => (
+                                                        <option
+                                                            key={option.id}
+                                                            value={option.id}
+                                                        >
+                                                            {option.name}
+                                                        </option>
+                                                    ))}
+                                                </NativeSelect>
+                                            ) : (
+                                                <Input
+                                                    aria-label={`Condition ${n} value`}
+                                                    className="w-48 flex-1"
+                                                    inputMode={
+                                                        isAmount(
+                                                            condition.field,
+                                                        )
+                                                            ? 'decimal'
+                                                            : undefined
+                                                    }
+                                                    placeholder={
+                                                        isAmount(
+                                                            condition.field,
+                                                        )
+                                                            ? 'CHF, e.g. -50.00'
+                                                            : ''
+                                                    }
+                                                    value={condition.value}
+                                                    onChange={(event) =>
+                                                        updateCondition(i, {
+                                                            value: event.target
                                                                 .value,
                                                         })
                                                     }
                                                 />
-                                            </>
-                                        )}
-                                        <Button
-                                            type="button"
-                                            size="icon"
-                                            variant="ghost"
-                                            aria-label={`Remove condition ${n}`}
-                                            disabled={conditions.length === 1}
-                                            onClick={() =>
-                                                setConditions((current) =>
-                                                    current.filter(
-                                                        (_, j) => j !== i,
-                                                    ),
-                                                )
-                                            }
-                                        >
-                                            <Trash2 />
-                                        </Button>
-                                    </div>
-                                    <InputError
-                                        message={
-                                            errors[`conditions.${i}.value`] ??
-                                            errors[`conditions.${i}.operator`]
-                                        }
-                                    />
-                                </div>
-                            );
-                        })}
-                        <InputError message={errors.conditions} />
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                                setConditions((current) => [
-                                    ...current,
-                                    {
-                                        field: 'description',
-                                        operator: 'contains',
-                                        value: '',
-                                        upper: '',
-                                    },
-                                ])
-                            }
-                        >
-                            <Plus /> Add condition
-                        </Button>
-                    </fieldset>
-
-                    <fieldset className="space-y-3">
-                        <legend className="mb-2 text-sm font-medium">
-                            Then
-                        </legend>
-                        {actions.map((action, i) => {
-                            const n = i + 1;
-                            const choices =
-                                action.type === 'set_category'
-                                    ? options.categories
-                                    : options.payees;
-
-                            return (
-                                <div key={i} className="space-y-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <NativeSelect
-                                            aria-label={`Action ${n}`}
-                                            className="w-40"
-                                            value={action.type}
-                                            onChange={(event) =>
-                                                updateAction(i, {
-                                                    type: event.target
-                                                        .value as RuleAction['type'],
-                                                })
-                                            }
-                                        >
-                                            {ACTIONS.map((item) => (
-                                                <option
-                                                    key={item.value}
-                                                    value={item.value}
-                                                >
-                                                    {item.label}
-                                                </option>
-                                            ))}
-                                        </NativeSelect>
-                                        {action.type === 'mark_as_transfer' ? (
-                                            <span className="w-44 text-xs text-muted-foreground">
-                                                Clears the category; pairing
-                                                looks for a counterpart.
-                                            </span>
-                                        ) : (
-                                            <NativeSelect
-                                                aria-label={`Action ${n} value`}
-                                                className="w-44"
-                                                value={action.value}
-                                                onChange={(event) =>
-                                                    updateAction(i, {
-                                                        value: event.target
-                                                            .value,
-                                                    })
+                                            )}
+                                            {condition.operator ===
+                                                'between' && (
+                                                <>
+                                                    <span className="text-sm text-muted-foreground">
+                                                        and
+                                                    </span>
+                                                    <Input
+                                                        aria-label={`Condition ${n} upper value`}
+                                                        className="w-32"
+                                                        inputMode="decimal"
+                                                        value={condition.upper}
+                                                        onChange={(event) =>
+                                                            updateCondition(i, {
+                                                                upper: event
+                                                                    .target
+                                                                    .value,
+                                                            })
+                                                        }
+                                                    />
+                                                </>
+                                            )}
+                                            <Button
+                                                type="button"
+                                                size="icon"
+                                                variant="ghost"
+                                                aria-label={`Remove condition ${n}`}
+                                                disabled={
+                                                    conditions.length === 1
+                                                }
+                                                onClick={() =>
+                                                    setConditions((current) =>
+                                                        current.filter(
+                                                            (_, j) => j !== i,
+                                                        ),
+                                                    )
                                                 }
                                             >
-                                                <option value="">
-                                                    Choose…
-                                                </option>
-                                                {action.type ===
-                                                    'set_payee' && (
-                                                    <option value="new">
-                                                        New payee…
-                                                    </option>
-                                                )}
-                                                {choices.map((option) => (
-                                                    <option
-                                                        key={option.id}
-                                                        value={option.id}
-                                                    >
-                                                        {option.name}
-                                                    </option>
-                                                ))}
-                                            </NativeSelect>
-                                        )}
-                                        {action.value === 'new' && (
-                                            <Input
-                                                aria-label={`Action ${n} new payee name`}
-                                                className="w-36"
-                                                placeholder="Payee name"
-                                                value={action.name}
-                                                onChange={(event) =>
-                                                    updateAction(i, {
-                                                        name: event.target
-                                                            .value,
-                                                    })
-                                                }
-                                            />
-                                        )}
-                                        <Button
-                                            type="button"
-                                            size="icon"
-                                            variant="ghost"
-                                            aria-label={`Remove action ${n}`}
-                                            onClick={() =>
-                                                setActions((current) =>
-                                                    current.filter(
-                                                        (_, j) => j !== i,
-                                                    ),
-                                                )
+                                                <Trash2 />
+                                            </Button>
+                                        </div>
+                                        <InputError
+                                            message={
+                                                errors[
+                                                    `conditions.${i}.value`
+                                                ] ??
+                                                errors[
+                                                    `conditions.${i}.operator`
+                                                ]
                                             }
-                                        >
-                                            <Trash2 />
-                                        </Button>
+                                        />
                                     </div>
-                                    <InputError
-                                        message={
-                                            errors[`actions.${i}.value`] ??
-                                            errors[`actions.${i}.type`] ??
-                                            errors[`actions.${i}.name`]
-                                        }
-                                    />
-                                </div>
-                            );
-                        })}
-                        <InputError message={errors.actions} />
-                        {unusedAction && (
+                                );
+                            })}
+                            <InputError message={errors.conditions} />
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
                                 onClick={() =>
-                                    setActions((current) => [
+                                    setConditions((current) => [
                                         ...current,
                                         {
-                                            type: unusedAction.value,
+                                            field: 'description',
+                                            operator: 'contains',
                                             value: '',
-                                            name: '',
+                                            upper: '',
                                         },
                                     ])
                                 }
                             >
-                                <Plus /> Add action
+                                <Plus /> Add condition
                             </Button>
-                        )}
-                    </fieldset>
+                        </fieldset>
 
-                    <div className="flex gap-2">
-                        <Button disabled={processing}>
-                            {rule ? 'Save rule' : 'Create rule'}
-                        </Button>
-                        <Button variant="ghost" asChild>
-                            <Link href={index()}>Cancel</Link>
-                        </Button>
-                    </div>
-                </form>
+                        <fieldset className="space-y-3">
+                            <legend className="mb-2 text-sm font-medium">
+                                Then
+                            </legend>
+                            {actions.map((action, i) => {
+                                const n = i + 1;
+                                const choices =
+                                    action.type === 'set_category'
+                                        ? options.categories
+                                        : options.payees;
 
-                <section
-                    className="space-y-3"
-                    aria-label="Matching transactions"
-                >
-                    <Heading
-                        variant="small"
-                        title="Matching transactions"
-                        description="Transactions these conditions match right now. Saving does not change them; use Apply on the Rules page."
-                    />
-                    <p
-                        className="text-sm text-muted-foreground"
-                        data-test="preview-count"
-                    >
-                        {preview.hasErrors
-                            ? 'Fix the conditions to see matches.'
-                            : preview.response === null
-                              ? 'Enter a condition to see matches.'
-                              : `${preview.response.count} matching ${preview.response.count === 1 ? 'transaction' : 'transactions'}${preview.response.count > preview.response.sample.length ? `, showing ${preview.response.sample.length}` : ''}`}
-                    </p>
-                    {!preview.hasErrors &&
-                        preview.response !== null &&
-                        preview.response.sample.length > 0 && (
-                            <DataTable>
-                                <thead>
-                                    <tr>
-                                        <Th>Date</Th>
-                                        <Th>Description</Th>
-                                        <Th>Category</Th>
-                                        <Th className="text-right">Amount</Th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {preview.response.sample.map((row) => (
-                                        <tr key={row.id}>
-                                            <Td className="whitespace-nowrap text-muted-foreground">
-                                                {row.date}
-                                            </Td>
-                                            <Td>{row.description}</Td>
-                                            <Td className="text-muted-foreground">
-                                                {row.category ?? '—'}
-                                            </Td>
-                                            <Td className="text-right whitespace-nowrap">
-                                                <Money
-                                                    value={row.amount}
-                                                    signed
+                                return (
+                                    <div key={i} className="space-y-1">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <NativeSelect
+                                                aria-label={`Action ${n}`}
+                                                className="w-40"
+                                                value={action.type}
+                                                onChange={(event) =>
+                                                    updateAction(i, {
+                                                        type: event.target
+                                                            .value as RuleAction['type'],
+                                                    })
+                                                }
+                                            >
+                                                {ACTIONS.map((item) => (
+                                                    <option
+                                                        key={item.value}
+                                                        value={item.value}
+                                                    >
+                                                        {item.label}
+                                                    </option>
+                                                ))}
+                                            </NativeSelect>
+                                            {action.type ===
+                                            'mark_as_transfer' ? (
+                                                <span className="w-44 text-xs text-muted-foreground">
+                                                    Clears the category; pairing
+                                                    looks for a counterpart.
+                                                </span>
+                                            ) : (
+                                                <NativeSelect
+                                                    aria-label={`Action ${n} value`}
+                                                    className="w-44"
+                                                    value={action.value}
+                                                    onChange={(event) =>
+                                                        updateAction(i, {
+                                                            value: event.target
+                                                                .value,
+                                                        })
+                                                    }
+                                                >
+                                                    <option value="">
+                                                        Choose…
+                                                    </option>
+                                                    {action.type ===
+                                                        'set_payee' && (
+                                                        <option value="new">
+                                                            New payee…
+                                                        </option>
+                                                    )}
+                                                    {choices.map((option) => (
+                                                        <option
+                                                            key={option.id}
+                                                            value={option.id}
+                                                        >
+                                                            {option.name}
+                                                        </option>
+                                                    ))}
+                                                </NativeSelect>
+                                            )}
+                                            {action.value === 'new' && (
+                                                <Input
+                                                    aria-label={`Action ${n} new payee name`}
+                                                    className="w-36"
+                                                    placeholder="Payee name"
+                                                    value={action.name}
+                                                    onChange={(event) =>
+                                                        updateAction(i, {
+                                                            name: event.target
+                                                                .value,
+                                                        })
+                                                    }
                                                 />
-                                            </Td>
+                                            )}
+                                            <Button
+                                                type="button"
+                                                size="icon"
+                                                variant="ghost"
+                                                aria-label={`Remove action ${n}`}
+                                                onClick={() =>
+                                                    setActions((current) =>
+                                                        current.filter(
+                                                            (_, j) => j !== i,
+                                                        ),
+                                                    )
+                                                }
+                                            >
+                                                <Trash2 />
+                                            </Button>
+                                        </div>
+                                        <InputError
+                                            message={
+                                                errors[`actions.${i}.value`] ??
+                                                errors[`actions.${i}.type`] ??
+                                                errors[`actions.${i}.name`]
+                                            }
+                                        />
+                                    </div>
+                                );
+                            })}
+                            <InputError message={errors.actions} />
+                            {unusedAction && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        setActions((current) => [
+                                            ...current,
+                                            {
+                                                type: unusedAction.value,
+                                                value: '',
+                                                name: '',
+                                            },
+                                        ])
+                                    }
+                                >
+                                    <Plus /> Add action
+                                </Button>
+                            )}
+                        </fieldset>
+
+                        <div className="flex gap-2">
+                            <Button disabled={processing}>
+                                {rule ? 'Save rule' : 'Create rule'}
+                            </Button>
+                            <Button variant="ghost" asChild>
+                                <Link href={index()}>Cancel</Link>
+                            </Button>
+                        </div>
+                    </form>
+
+                    <section
+                        className="space-y-3"
+                        aria-label="Matching transactions"
+                    >
+                        <Heading
+                            variant="small"
+                            title="Matching transactions"
+                            description="Transactions these conditions match right now. Saving does not change them; use Apply on the Rules page."
+                        />
+                        <p
+                            className="text-sm text-muted-foreground"
+                            data-test="preview-count"
+                        >
+                            {preview.hasErrors
+                                ? 'Fix the conditions to see matches.'
+                                : previewFailed
+                                  ? 'Couldn’t load matches. Check your connection and edit a condition to retry.'
+                                  : preview.response === null
+                                    ? 'Enter a condition to see matches.'
+                                    : `${preview.response.count} matching ${preview.response.count === 1 ? 'transaction' : 'transactions'}${preview.response.count > preview.response.sample.length ? `, showing ${preview.response.sample.length}` : ''}`}
+                        </p>
+                        {!preview.hasErrors &&
+                            preview.response !== null &&
+                            preview.response.sample.length > 0 && (
+                                <DataTable>
+                                    <thead>
+                                        <tr>
+                                            <Th>Date</Th>
+                                            <Th>Description</Th>
+                                            <Th>Category</Th>
+                                            <Th className="text-right">
+                                                Amount
+                                            </Th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </DataTable>
-                        )}
-                </section>
+                                    </thead>
+                                    <tbody>
+                                        {preview.response.sample.map((row) => (
+                                            <tr key={row.id}>
+                                                <Td className="whitespace-nowrap text-muted-foreground">
+                                                    {row.date}
+                                                </Td>
+                                                <Td>{row.description}</Td>
+                                                <Td className="text-muted-foreground">
+                                                    {row.category ?? '—'}
+                                                </Td>
+                                                <Td className="text-right whitespace-nowrap">
+                                                    <Money
+                                                        value={row.amount}
+                                                        signed
+                                                    />
+                                                </Td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </DataTable>
+                            )}
+                    </section>
+                </div>
             </div>
         </>
     );
 }
 
 EditRule.layout = {
+    wide: true,
     breadcrumbs: [{ title: 'Rules', href: index() }],
 };

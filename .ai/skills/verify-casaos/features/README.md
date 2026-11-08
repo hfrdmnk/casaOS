@@ -14,7 +14,7 @@ What casaOS does today, how a user reaches each feature, and what proves it work
 
 App UI (logged in):
 
-- [Dashboard and navigation](./dashboard.md): `/`, sidebar, user menu, guest redirect.
+- [Dashboard and navigation](./dashboard.md): `/`, top bar, user menu, guest redirect.
 - [Profile settings](./settings-profile.md): `/settings/profile` name and email update.
 - [Delete account](./delete-account.md): `/settings/profile` Delete account dialog.
 - [Password update](./settings-password.md): `/settings/security` Update password form, behind password confirmation.

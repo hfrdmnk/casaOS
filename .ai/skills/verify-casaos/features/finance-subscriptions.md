@@ -8,7 +8,7 @@ Help article: none
 
 ## Sub-features
 
-- `subscriptions-page` `/finance/subscriptions` (sidebar `Subscriptions`): `Active` (rows `data-test="subscription"`, `monthly-total` = count and CHF per month), `Suggestions` (rows `subscription-suggestion` with their charges, `Confirm <name>` / `Dismiss <name>`), `Cancelled` (with `Reactivate <name>`). `Edit <name>` opens a dialog (name, amount, interval, payee, description, account, next date). `Detect subscriptions`.
+- `subscriptions-page` `/finance/subscriptions` (top bar, More → `Subscriptions`): `Active` (rows `data-test="subscription"`, `monthly-total` = count and CHF per month), `Suggestions` (rows `subscription-suggestion` with their charges, `Confirm <name>` / `Dismiss <name>`), `Cancelled` (with `Reactivate <name>`). `Edit <name>` opens a dialog (name, amount, interval, payee, description, account, next date). `Detect subscriptions`.
 - `subscriptions-mark` `/finance/transactions`: on a charge, `Subscription actions for <description>` → `Mark as subscription…` (dialog `Mark as subscription`, prefilled name, amount and Monthly; `Create subscription`), `Link to <subscription>`, `Unlink from <subscription>`. A linked row shows the `subscription-marker` badge. Filter `Subscriptions`: all / payments / not subscriptions / one subscription.
 - `subscriptions-import` an import links new matching charges (`Linked to subscriptions` in the batch summary) and moves the next date; new suggestions show as `N possible subscriptions need a decision`.
 - `subscriptions-undo` undoing a batch deletes the charges it created, unlinks pre-existing charges it linked, recomputes next dates and re-runs detection. Subscriptions are never deleted.
@@ -16,7 +16,7 @@ Help article: none
 
 ## How to reach it
 
-- Sidebar, Finance → `Subscriptions`; Dashboard → `N subscription suggestions` / `All subscriptions`.
+- Top bar, More → `Subscriptions`; Dashboard → `N subscription suggestions` / `All subscriptions`.
 - `/finance/transactions?subscription=any|none|<id>`.
 
 ## Drive and prove

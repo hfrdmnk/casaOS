@@ -8,6 +8,7 @@ import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { index } from '@/routes/finance/import';
 import type { AccountTypeOption, MappingSummary } from '@/types/finance';
+import { usePendingVisit } from '@/hooks/use-pending-visit';
 
 type Rejection = {
     message: string;
@@ -57,10 +58,12 @@ export default function ImportShow({
         filter_value: '',
     };
 
+    const committing = usePendingVisit();
+
     return (
         <>
             <Head title={`Map ${upload.filename}`} />
-            <div className="space-y-8 p-4">
+            <div className="space-y-16">
                 <Heading
                     title={`Map ${upload.filename}`}
                     description={
@@ -79,7 +82,7 @@ export default function ImportShow({
                             <AlertTriangle className="size-4" />
                             {rejection.message}
                         </p>
-                        <ul className="max-h-64 space-y-0.5 overflow-y-auto">
+                        <ul className="max-h-64 space-y-0.5 overflow-y-auto overscroll-contain">
                             {rejection.errors.map((error, position) => (
                                 <li key={position}>
                                     Line {error.line}
@@ -121,13 +124,16 @@ export default function ImportShow({
                             Add another mapping below, or import the file now.
                         </p>
                         <Button
+                            disabled={committing.pending}
                             onClick={() =>
                                 router.post(
                                     ImportController.commit.url(upload.id),
+                                    {},
+                                    committing.callbacks,
                                 )
                             }
                         >
-                            Import now
+                            {committing.pending ? 'Importing…' : 'Import now'}
                         </Button>
                     </div>
                 )}
@@ -147,11 +153,12 @@ export default function ImportShow({
                     accounts={accounts}
                     types={types}
                     submitLabel="Save mapping"
-                    onSubmit={(payload) =>
+                    onSubmit={(payload, onFinish) =>
                         submitMapping(
                             'post',
                             ImportMappingController.store.url(upload.id),
                             payload,
+                            onFinish,
                         )
                     }
                 />
@@ -161,5 +168,6 @@ export default function ImportShow({
 }
 
 ImportShow.layout = {
+    wide: true,
     breadcrumbs: [{ title: 'Import', href: index() }],
 };

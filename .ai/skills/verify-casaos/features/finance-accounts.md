@@ -14,7 +14,7 @@ Help article: none
 
 ## How to reach it
 
-- Sidebar, Finance → `Accounts` (`/finance/accounts`), then an account name (`/finance/accounts/<id>`).
+- Top bar, `Accounts` (`/finance/accounts`), then an account name (`/finance/accounts/<id>`).
 
 ## Drive and prove
 

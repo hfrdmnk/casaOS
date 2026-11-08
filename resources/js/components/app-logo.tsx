@@ -6,15 +6,9 @@ export default function AppLogo() {
     const { name } = usePage().props;
 
     return (
-        <>
-            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-brand">
-                <AppLogoIcon className="size-4 text-white" />
-            </div>
-            <div className="ml-1 grid flex-1 text-left text-sm">
-                <span className="mb-0.5 truncate leading-tight font-semibold">
-                    {name}
-                </span>
-            </div>
-        </>
+        <span className="flex items-center gap-2 text-[15px] font-medium tracking-[-0.01em]">
+            <AppLogoIcon className="size-2 text-foreground" />
+            {name}
+        </span>
     );
 }

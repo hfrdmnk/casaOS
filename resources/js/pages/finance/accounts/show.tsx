@@ -8,7 +8,6 @@ import { Money } from '@/components/finance/money';
 import { StatusBadge } from '@/components/finance/status-badge';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -22,6 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { index, show } from '@/routes/finance/accounts';
+import { index as importPage } from '@/routes/finance/import';
 import { edit as editMapping } from '@/routes/finance/mappings';
 import { destroy as destroySnapshot } from '@/routes/finance/snapshots';
 import { index as transactionsIndex } from '@/routes/finance/transactions';
@@ -59,88 +59,75 @@ export default function ShowAccount({
     return (
         <>
             <Head title={account.name} />
-            <div className="space-y-8 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="space-y-1">
-                        <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
-                            {account.name}
-                            {account.archived && (
-                                <Badge variant="secondary">Archived</Badge>
-                            )}
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            {account.type_label} · {account.currency}
-                            {!account.importable && ' · balance only'}
-                        </p>
-                    </div>
-                    <div className="flex gap-2">
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="outline">
-                                    <Pencil /> Edit
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogTitle>Edit account</DialogTitle>
-                                <DialogDescription>
-                                    Rename the account or change its type.
-                                </DialogDescription>
-                                <Form
-                                    {...AccountController.update.form(
-                                        account.id,
-                                    )}
-                                    className="space-y-4"
-                                >
-                                    {({ processing, errors }) => (
-                                        <>
-                                            <AccountFormFields
-                                                types={types}
-                                                errors={errors}
-                                                defaults={account}
-                                            />
-                                            <DialogFooter className="gap-2">
-                                                <DialogClose asChild>
-                                                    <Button
-                                                        type="button"
-                                                        variant="secondary"
-                                                    >
-                                                        Cancel
-                                                    </Button>
-                                                </DialogClose>
-                                                <Button disabled={processing}>
-                                                    Save
+            <div className="space-y-16">
+                <Heading
+                    title={account.name}
+                    description={`${account.type_label} · ${account.currency}${account.importable ? '' : ' · balance only'}${account.archived ? ' · archived' : ''}`}
+                >
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline">
+                                <Pencil /> Edit
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogTitle>Edit account</DialogTitle>
+                            <DialogDescription>
+                                Rename the account or change its type.
+                            </DialogDescription>
+                            <Form
+                                {...AccountController.update.form(account.id)}
+                                className="space-y-4"
+                            >
+                                {({ processing, errors }) => (
+                                    <>
+                                        <AccountFormFields
+                                            types={types}
+                                            errors={errors}
+                                            defaults={account}
+                                        />
+                                        <DialogFooter className="gap-2">
+                                            <DialogClose asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                >
+                                                    Cancel
                                                 </Button>
-                                            </DialogFooter>
-                                        </>
-                                    )}
-                                </Form>
-                            </DialogContent>
-                        </Dialog>
-                        {account.archived ? (
-                            <Button
-                                variant="outline"
-                                onClick={() =>
-                                    router.visit(
-                                        AccountController.unarchive(account.id),
-                                    )
-                                }
-                            >
-                                <ArchiveRestore /> Restore
-                            </Button>
-                        ) : (
-                            <Button
-                                variant="outline"
-                                onClick={() =>
-                                    router.visit(
-                                        AccountController.archive(account.id),
-                                    )
-                                }
-                            >
-                                <Archive /> Archive
-                            </Button>
-                        )}
-                    </div>
-                </div>
+                                            </DialogClose>
+                                            <Button disabled={processing}>
+                                                Save
+                                            </Button>
+                                        </DialogFooter>
+                                    </>
+                                )}
+                            </Form>
+                        </DialogContent>
+                    </Dialog>
+                    {account.archived ? (
+                        <Button
+                            variant="outline"
+                            onClick={() =>
+                                router.visit(
+                                    AccountController.unarchive(account.id),
+                                )
+                            }
+                        >
+                            <ArchiveRestore /> Restore
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="outline"
+                            onClick={() =>
+                                router.visit(
+                                    AccountController.archive(account.id),
+                                )
+                            }
+                        >
+                            <Archive /> Archive
+                        </Button>
+                    )}
+                </Heading>
 
                 <div className="grid gap-4 sm:grid-cols-3">
                     <div className="rounded-xl border p-4">
@@ -286,6 +273,9 @@ export default function ShowAccount({
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() =>
+                                                    window.confirm(
+                                                        `Delete the balance snapshot from ${snapshot.date}?`,
+                                                    ) &&
                                                     router.visit(
                                                         destroySnapshot(
                                                             snapshot.id,
@@ -350,33 +340,46 @@ export default function ShowAccount({
                                 All transactions
                             </Link>
                         </div>
-                        <DataTable>
-                            <tbody>
-                                {recentTransactions.map((transaction) => (
-                                    <tr key={transaction.id}>
-                                        <Td className="whitespace-nowrap text-muted-foreground">
-                                            {transaction.date}
-                                        </Td>
-                                        <Td>
-                                            {transaction.payee ??
-                                                transaction.description}{' '}
-                                            <StatusBadge
-                                                status={transaction.status}
-                                            />
-                                        </Td>
-                                        <Td className="text-muted-foreground">
-                                            {transaction.category}
-                                        </Td>
-                                        <Td className="text-right">
-                                            <Money
-                                                value={transaction.amount}
-                                                signed
-                                            />
-                                        </Td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </DataTable>
+                        {recentTransactions.length === 0 ? (
+                            <p className="border-y py-3 text-sm text-muted-foreground">
+                                No transactions yet.{' '}
+                                <Link
+                                    href={importPage()}
+                                    className="text-link hover:underline"
+                                >
+                                    Import a statement
+                                </Link>{' '}
+                                to add them.
+                            </p>
+                        ) : (
+                            <DataTable>
+                                <tbody>
+                                    {recentTransactions.map((transaction) => (
+                                        <tr key={transaction.id}>
+                                            <Td className="whitespace-nowrap text-muted-foreground">
+                                                {transaction.date}
+                                            </Td>
+                                            <Td>
+                                                {transaction.payee ??
+                                                    transaction.description}{' '}
+                                                <StatusBadge
+                                                    status={transaction.status}
+                                                />
+                                            </Td>
+                                            <Td className="text-muted-foreground">
+                                                {transaction.category}
+                                            </Td>
+                                            <Td className="text-right">
+                                                <Money
+                                                    value={transaction.amount}
+                                                    signed
+                                                />
+                                            </Td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </DataTable>
+                        )}
                     </section>
                 )}
             </div>

@@ -26,7 +26,7 @@ export default function Security(props: Props) {
         <>
             <Head title="Security settings" />
 
-            <h1 className="sr-only">Security settings</h1>
+            <h2 className="sr-only">Security settings</h2>
 
             <div className="space-y-6">
                 <Heading

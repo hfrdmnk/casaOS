@@ -25,6 +25,7 @@ import type {
     Paginated,
     TransactionRow,
 } from '@/types/finance';
+import { usePendingVisit } from '@/hooks/use-pending-visit';
 
 type Filters = {
     account: string;
@@ -79,47 +80,53 @@ export default function Transactions({
         );
     }
 
+    const finding = usePendingVisit();
+
     return (
         <>
             <Head title="Transactions" />
-            <div className="space-y-6 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <Heading
-                        title="Transactions"
-                        description="Every imported transaction, newest first. Transfers are neither income nor spending."
-                    />
-                    <div className="flex items-center gap-2">
-                        {suggestions_count > 0 && (
-                            <Button variant="link" asChild>
-                                <Link
-                                    href={transfers()}
-                                    data-test="suggestions-link"
-                                >
-                                    {suggestions_count} transfer{' '}
-                                    {suggestions_count === 1
-                                        ? 'suggestion'
-                                        : 'suggestions'}
-                                </Link>
-                            </Button>
-                        )}
-                        <Button
-                            variant="outline"
-                            onClick={() =>
-                                router.post(
-                                    TransferController.find.url(),
-                                    {},
-                                    { preserveScroll: true },
-                                )
-                            }
-                        >
-                            <ArrowLeftRight /> Find transfers
+            <div className="space-y-16">
+                <Heading
+                    title="Transactions"
+                    description="Every imported transaction, newest first. Transfers are neither income nor spending."
+                >
+                    {suggestions_count > 0 && (
+                        <Button variant="link" asChild>
+                            <Link
+                                href={transfers()}
+                                data-test="suggestions-link"
+                            >
+                                {suggestions_count} transfer{' '}
+                                {suggestions_count === 1
+                                    ? 'suggestion'
+                                    : 'suggestions'}
+                            </Link>
                         </Button>
-                    </div>
-                </div>
+                    )}
+                    <Button
+                        variant="outline"
+                        disabled={finding.pending}
+                        onClick={() =>
+                            router.post(
+                                TransferController.find.url(),
+                                {},
+                                {
+                                    preserveScroll: true,
+                                    ...finding.callbacks,
+                                },
+                            )
+                        }
+                    >
+                        <ArrowLeftRight />{' '}
+                        {finding.pending
+                            ? 'Finding transfers…'
+                            : 'Find transfers'}
+                    </Button>
+                </Heading>
 
                 <form
                     onSubmit={applyFilters}
-                    className="grid gap-3 sm:grid-cols-2 lg:grid-cols-8"
+                    className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
                     aria-label="Filters"
                 >
                     <div className="grid gap-1 lg:col-span-2">
@@ -231,7 +238,7 @@ export default function Transactions({
                             defaultValue={filters.to}
                         />
                     </div>
-                    <div className="flex gap-2 lg:col-span-8">
+                    <div className="flex gap-2 lg:col-span-4">
                         <Button type="submit">Apply filters</Button>
                         <Button variant="ghost" asChild>
                             <Link href={index()}>Clear</Link>
@@ -476,5 +483,6 @@ function SourceNote({ source }: { source: TransactionRow['category_source'] }) {
 }
 
 Transactions.layout = {
+    wide: true,
     breadcrumbs: [{ title: 'Transactions', href: index() }],
 };

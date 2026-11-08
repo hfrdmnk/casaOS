@@ -17,7 +17,7 @@ Help article: none
 
 ## How to reach it
 
-- Sidebar, Finance → `Rules` (`/finance/rules`), `/finance/rules/create`, `/finance/rules/<id>/edit`, `/finance/rules/apply`, `/finance/rules/<id>/apply`.
+- Top bar, More → `Rules` (`/finance/rules`), `/finance/rules/create`, `/finance/rules/<id>/edit`, `/finance/rules/apply`, `/finance/rules/<id>/apply`.
 - Transactions list: the wand button on each row.
 
 ## Drive and prove

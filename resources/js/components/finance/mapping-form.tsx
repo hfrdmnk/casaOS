@@ -246,11 +246,15 @@ export function MappingForm({
     accounts: { id: number; name: string }[];
     types: AccountTypeOption[];
     submitLabel: string;
-    onSubmit: (payload: ReturnType<typeof toPayload>) => void;
+    onSubmit: (
+        payload: ReturnType<typeof toPayload>,
+        onFinish: () => void,
+    ) => void;
     lockShape?: boolean;
 }) {
     const errors = usePage().props.errors as Record<string, string>;
     const [values, setValues] = useState<MappingValues>(initial);
+    const [submitting, setSubmitting] = useState(false);
     const [preview, setPreview] = useState<Preview | null>(null);
     const [previewErrors, setPreviewErrors] = useState<Record<string, string>>(
         {},
@@ -881,8 +885,13 @@ export function MappingForm({
                 </div>
                 <Button
                     type="button"
-                    onClick={() => onSubmit(toPayload(values, true))}
-                    disabled={!ready}
+                    onClick={() => {
+                        setSubmitting(true);
+                        onSubmit(toPayload(values, true), () =>
+                            setSubmitting(false),
+                        );
+                    }}
+                    disabled={!ready || submitting}
                 >
                     {submitLabel}
                 </Button>
@@ -895,11 +904,11 @@ export function submitMapping(
     method: 'post' | 'put',
     url: string,
     payload: ReturnType<typeof toPayload>,
-    onSuccess?: () => void,
+    onFinish: () => void,
 ) {
     router[method](url, payload, {
         preserveScroll: true,
         preserveState: true,
-        onSuccess,
+        onFinish,
     });
 }

@@ -3,9 +3,12 @@ import { cn } from '@/lib/utils';
 
 export function DataTable({ className, ...props }: ComponentProps<'table'>) {
     return (
-        <div className="overflow-x-auto rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
+        <div className="-mx-3 overflow-x-auto">
             <table
-                className={cn('w-full text-left text-sm', className)}
+                className={cn(
+                    'w-full text-left text-sm [&_tbody_tr]:transition-colors [&_tbody_tr]:duration-150 [&_tbody_tr]:hover:bg-accent',
+                    className,
+                )}
                 {...props}
             />
         </div>
@@ -16,7 +19,7 @@ export function Th({ className, ...props }: ComponentProps<'th'>) {
     return (
         <th
             className={cn(
-                'border-b bg-muted/40 px-3 py-2 text-xs font-medium whitespace-nowrap text-muted-foreground',
+                'border-b px-3 pt-0 pb-2 text-xs font-normal whitespace-nowrap text-faint',
                 className,
             )}
             {...props}
@@ -27,7 +30,7 @@ export function Th({ className, ...props }: ComponentProps<'th'>) {
 export function Td({ className, ...props }: ComponentProps<'td'>) {
     return (
         <td
-            className={cn('border-b px-3 py-2 align-middle', className)}
+            className={cn('border-b px-3 py-2.5 align-middle', className)}
             {...props}
         />
     );

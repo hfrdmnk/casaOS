@@ -14,7 +14,7 @@ Help article: none
 
 ## How to reach it
 
-- Settings sidebar → `API tokens` (`/settings/api-tokens`). The page is behind password confirmation, like Security: `verify:login` lands on `Confirm password`; fill `Password` with the scenario's `password` and click `Confirm password`.
+- Settings tabs under the page header → `API tokens` (`/settings/api-tokens`). The page is behind password confirmation, like Security: `verify:login` lands on `Confirm password`; fill `Password` with the scenario's `password` and click `Confirm password`.
 
 ## Drive and prove
 

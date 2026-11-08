@@ -35,23 +35,20 @@ export default function Rules({
     return (
         <>
             <Head title="Rules" />
-            <div className="space-y-6 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <Heading
-                        title="Rules"
-                        description="Every matching rule applies, top to bottom; a later rule overrides an earlier one. Values you set by hand are never changed."
-                    />
-                    <div className="flex gap-2">
-                        <Button variant="outline" asChild>
-                            <Link href={RuleController.reviewAll()}>
-                                Apply all rules…
-                            </Link>
-                        </Button>
-                        <Button asChild>
-                            <Link href={RuleController.create()}>New rule</Link>
-                        </Button>
-                    </div>
-                </div>
+            <div className="space-y-16">
+                <Heading
+                    title="Rules"
+                    description="Every matching rule applies, top to bottom; a later rule overrides an earlier one. Values you set by hand are never changed."
+                >
+                    <Button variant="outline" asChild>
+                        <Link href={RuleController.reviewAll()}>
+                            Apply all rules…
+                        </Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href={RuleController.create()}>New rule</Link>
+                    </Button>
+                </Heading>
 
                 {rules.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
@@ -214,5 +211,6 @@ export default function Rules({
 }
 
 Rules.layout = {
+    wide: true,
     breadcrumbs: [{ title: 'Rules', href: index() }],
 };

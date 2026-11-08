@@ -29,12 +29,11 @@ export default function Accounts({
     return (
         <>
             <Head title="Accounts" />
-            <div className="space-y-6 p-4">
-                <div className="flex items-start justify-between gap-4">
-                    <Heading
-                        title="Accounts"
-                        description="Balances today, from your snapshots and transactions"
-                    />
+            <div className="space-y-16">
+                <Heading
+                    title="Accounts"
+                    description="Balances today, from your snapshots and transactions."
+                >
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button>
@@ -75,7 +74,7 @@ export default function Accounts({
                             </Form>
                         </DialogContent>
                     </Dialog>
-                </div>
+                </Heading>
 
                 {accounts.length === 0 ? (
                     <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">

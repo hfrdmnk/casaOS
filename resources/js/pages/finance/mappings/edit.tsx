@@ -75,12 +75,11 @@ export default function EditMapping({
     return (
         <>
             <Head title={`Edit mapping ${mapping.name}`} />
-            <div className="space-y-8 p-4">
-                <div className="flex items-start justify-between gap-4">
-                    <Heading
-                        title={`Edit mapping ${mapping.name}`}
-                        description="Changes apply to the next import; transactions already imported stay as they are."
-                    />
+            <div className="space-y-16">
+                <Heading
+                    title={`Edit mapping ${mapping.name}`}
+                    description="Changes apply to the next import; transactions already imported stay as they are."
+                >
                     <Button
                         variant="destructive"
                         onClick={() => {
@@ -99,7 +98,7 @@ export default function EditMapping({
                     >
                         Delete mapping
                     </Button>
-                </div>
+                </Heading>
                 <MappingForm
                     initial={initial}
                     savedHeader={mapping.header}
@@ -107,11 +106,12 @@ export default function EditMapping({
                     types={types}
                     lockShape
                     submitLabel="Save changes"
-                    onSubmit={(payload) =>
+                    onSubmit={(payload, onFinish) =>
                         submitMapping(
                             'put',
                             ImportMappingController.update.url(mapping.id),
                             payload,
+                            onFinish,
                         )
                     }
                 />
@@ -121,5 +121,6 @@ export default function EditMapping({
 }
 
 EditMapping.layout = {
+    wide: true,
     breadcrumbs: [{ title: 'Import', href: index() }],
 };

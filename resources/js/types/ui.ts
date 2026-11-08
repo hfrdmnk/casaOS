@@ -4,9 +4,8 @@ import type { BreadcrumbItem } from '@/types/navigation';
 export type AppLayoutProps = {
     children: ReactNode;
     breadcrumbs?: BreadcrumbItem[];
+    wide?: boolean;
 };
-
-export type AppVariant = 'header' | 'sidebar';
 
 export type FlashToast = {
     type: 'success' | 'info' | 'warning' | 'error';

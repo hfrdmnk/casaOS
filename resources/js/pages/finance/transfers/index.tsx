@@ -7,6 +7,7 @@ import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { index } from '@/routes/finance/transfers';
 import type { TransactionRow, TransferSuggestion } from '@/types/finance';
+import { usePendingVisit } from '@/hooks/use-pending-visit';
 
 export default function Transfers({
     suggestions,
@@ -16,29 +17,36 @@ export default function Transfers({
     paired: number;
 }) {
     const visit = { preserveScroll: true } as const;
+    const finding = usePendingVisit();
 
     return (
         <>
             <Head title="Transfers" />
-            <div className="space-y-6 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <Heading
-                        title="Transfers"
-                        description="Money moving between your accounts is neither income nor spending. Pairs that could match more than one transaction wait here for you."
-                    />
+            <div className="space-y-16">
+                <Heading
+                    title="Transfers"
+                    description="Money moving between your accounts is neither income nor spending. Pairs that could match more than one transaction wait here for you."
+                >
                     <Button
                         variant="outline"
+                        disabled={finding.pending}
                         onClick={() =>
                             router.post(
                                 TransferController.find.url(),
                                 {},
-                                visit,
+                                {
+                                    ...visit,
+                                    ...finding.callbacks,
+                                },
                             )
                         }
                     >
-                        <ArrowLeftRight /> Find transfers
+                        <ArrowLeftRight />{' '}
+                        {finding.pending
+                            ? 'Finding transfers…'
+                            : 'Find transfers'}
                     </Button>
-                </div>
+                </Heading>
 
                 <p
                     className="text-sm text-muted-foreground"

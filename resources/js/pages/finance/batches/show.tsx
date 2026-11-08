@@ -4,7 +4,6 @@ import ImportBatchController from '@/actions/App/Http/Controllers/Finance/Import
 import { DataTable, Td, Th } from '@/components/finance/data-table';
 import { Money } from '@/components/finance/money';
 import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { show as showAccount } from '@/routes/finance/accounts';
 import { show } from '@/routes/finance/batches';
@@ -12,6 +11,7 @@ import { index } from '@/routes/finance/import';
 import { index as subscriptions } from '@/routes/finance/subscriptions';
 import { index as transfers } from '@/routes/finance/transfers';
 import type { Batch } from '@/types/finance';
+import { usePendingVisit } from '@/hooks/use-pending-visit';
 
 export default function ShowBatch({ batch }: { batch: Batch }) {
     const { summary } = batch;
@@ -26,27 +26,23 @@ export default function ShowBatch({ batch }: { batch: Batch }) {
         ['Linked to subscriptions', summary.linked_to_subscriptions ?? 0],
     ];
 
+    const undoing = usePendingVisit();
+
     return (
         <>
             <Head title={`Import of ${batch.filename}`} />
-            <div className="space-y-8 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="space-y-1">
-                        <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
-                            Import of {batch.filename}
-                            {batch.undone_at && (
-                                <Badge variant="secondary">Undone</Badge>
-                            )}
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            {new Date(batch.created_at).toLocaleString('de-CH')}
-                        </p>
-                    </div>
+            <div className="space-y-16">
+                <Heading
+                    title={`Import of ${batch.filename}`}
+                    description={`${new Date(batch.created_at).toLocaleString('de-CH')}${batch.undone_at ? ' · undone' : ''}`}
+                >
                     {!batch.undone_at && (
-                        <div className="space-y-1 text-right">
+                        <>
                             <Button
                                 variant="outline"
-                                disabled={batch.blocked_by !== null}
+                                disabled={
+                                    batch.blocked_by !== null || undoing.pending
+                                }
                                 onClick={() => {
                                     if (
                                         window.confirm(
@@ -57,11 +53,16 @@ export default function ShowBatch({ batch }: { batch: Batch }) {
                                             ImportBatchController.undo.url(
                                                 batch.id,
                                             ),
+                                            {},
+                                            undoing.callbacks,
                                         );
                                     }
                                 }}
                             >
-                                <Undo2 /> Undo import
+                                <Undo2 />{' '}
+                                {undoing.pending
+                                    ? 'Undoing import…'
+                                    : 'Undo import'}
                             </Button>
                             {batch.blocked_by && (
                                 <p className="text-xs text-muted-foreground">
@@ -75,9 +76,9 @@ export default function ShowBatch({ batch }: { batch: Batch }) {
                                     first.
                                 </p>
                             )}
-                        </div>
+                        </>
                     )}
-                </div>
+                </Heading>
 
                 <dl
                     className="grid gap-4 sm:grid-cols-4 lg:grid-cols-7"
@@ -240,5 +241,6 @@ export default function ShowBatch({ batch }: { batch: Batch }) {
 }
 
 ShowBatch.layout = {
+    wide: true,
     breadcrumbs: [{ title: 'Import', href: index() }],
 };

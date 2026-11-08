@@ -158,7 +158,7 @@ function TokenItem({ token }: { token: ApiToken }) {
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        className="text-destructive-foreground hover:bg-destructive/10 hover:text-destructive-foreground"
                     >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Revoke {token.name}</span>
@@ -179,7 +179,7 @@ function TokenItem({ token }: { token: ApiToken }) {
                             onClick={revoke}
                             disabled={revoking}
                         >
-                            {revoking ? 'Revoking...' : 'Revoke token'}
+                            {revoking ? 'Revoking…' : 'Revoke token'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -195,7 +195,7 @@ export default function ApiTokens({ tokens, mcpUrl }: Props) {
         <>
             <Head title="API tokens" />
 
-            <h1 className="sr-only">API tokens</h1>
+            <h2 className="sr-only">API tokens</h2>
 
             <div className="space-y-6">
                 <Heading

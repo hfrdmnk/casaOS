@@ -46,7 +46,7 @@ export default function ApplyRules({
     return (
         <>
             <Head title={title} />
-            <div className="space-y-6 p-4">
+            <div className="space-y-16">
                 <Heading
                     title={title}
                     description={
@@ -156,5 +156,6 @@ export default function ApplyRules({
 }
 
 ApplyRules.layout = {
+    wide: true,
     breadcrumbs: [{ title: 'Rules', href: index() }],
 };

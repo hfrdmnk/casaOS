@@ -16,6 +16,7 @@ import type {
     Subscription,
     SubscriptionSuggestion,
 } from '@/types/finance';
+import { usePendingVisit } from '@/hooks/use-pending-visit';
 
 const visit = { preserveScroll: true } as const;
 
@@ -37,31 +38,38 @@ export default function Subscriptions({
     payees: Option[];
 }) {
     const [editing, setEditing] = useState<Subscription | null>(null);
+    const detecting = usePendingVisit();
     const intervalLabel = (value: string) =>
         intervals.find((interval) => interval.value === value)?.label ?? value;
 
     return (
         <>
             <Head title="Subscriptions" />
-            <div className="space-y-8 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <Heading
-                        title="Subscriptions"
-                        description="Recurring payments. New charges that match are linked on import and move the next date."
-                    />
+            <div className="space-y-16">
+                <Heading
+                    title="Subscriptions"
+                    description="Recurring payments. New charges that match are linked on import and move the next date."
+                >
                     <Button
                         variant="outline"
+                        disabled={detecting.pending}
                         onClick={() =>
                             router.post(
                                 SubscriptionController.detect.url(),
                                 {},
-                                visit,
+                                {
+                                    ...visit,
+                                    ...detecting.callbacks,
+                                },
                             )
                         }
                     >
-                        <ScanSearch /> Detect subscriptions
+                        <ScanSearch />{' '}
+                        {detecting.pending
+                            ? 'Detecting subscriptions…'
+                            : 'Detect subscriptions'}
                     </Button>
-                </div>
+                </Heading>
 
                 <section className="space-y-3" aria-labelledby="active-heading">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -371,5 +379,6 @@ function SubscriptionTable({
 }
 
 Subscriptions.layout = {
+    wide: true,
     breadcrumbs: [{ title: 'Subscriptions', href: index() }],
 };

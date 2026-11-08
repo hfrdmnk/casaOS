@@ -14,6 +14,7 @@ use App\Models\Finance\TransferSuggestion;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('another user gets 404 on every finance row', function (string $method, string $route, string $model) {
     $owner = User::factory()->create();
@@ -42,7 +43,8 @@ test('another user gets 404 on every finance row', function (string $method, str
 
     $this->actingAs(User::factory()->create())
         ->json($method, route($route, $rows[$model]))
-        ->assertNotFound();
+        ->assertNotFound()
+        ->assertJsonStructure(['message']);
 
     expect($rows[$model]::query()->whereKey($rows[$model]->getKey())->exists())->toBeTrue();
 })->with([
@@ -165,4 +167,13 @@ test('lists only show the user\'s own rows', function () {
 
 test('guests are sent to the login page', function () {
     $this->get(route('finance.accounts.index'))->assertRedirect(route('login'));
+});
+
+test('a missing or foreign row renders the app error page, not the framework one', function () {
+    $foreign = Account::factory()->for(User::factory())->create();
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('finance.accounts.show', $foreign))
+        ->assertNotFound()
+        ->assertInertia(fn (Assert $page) => $page->component('error')->where('status', 404));
 });

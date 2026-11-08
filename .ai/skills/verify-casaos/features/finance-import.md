@@ -17,7 +17,7 @@ Help article: none
 
 ## How to reach it
 
-- Sidebar, Finance → `Import` (`/finance/import`).
+- Top bar, More → `Import` (`/finance/import`).
 - A batch: `/finance/batches/<id>`, linked from Recent imports.
 
 ## Drive and prove

@@ -21,7 +21,7 @@ export default function Categories({
     return (
         <>
             <Head title="Categories" />
-            <div className="max-w-3xl space-y-6 p-4">
+            <div className="space-y-16">
                 <Heading
                     title="Categories"
                     description="One category per transaction. Deleting a category leaves its transactions uncategorized."

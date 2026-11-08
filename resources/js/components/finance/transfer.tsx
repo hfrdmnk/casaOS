@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import type { TransactionRow, TransferSource } from '@/types/finance';
+import { usePendingVisit } from '@/hooks/use-pending-visit';
 
 const SOURCE_LABELS: Record<TransferSource, string> = {
     auto: 'paired automatically',
@@ -148,6 +149,8 @@ function PairDialog({
 }) {
     const [search, setSearch] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [loadFailed, setLoadFailed] = useState(false);
+    const pairing = usePendingVisit();
     const http = useHttp<
         Record<string, never>,
         { candidates: TransactionRow[] }
@@ -162,7 +165,8 @@ function PairDialog({
                             query: search.trim() ? { search } : {},
                         }),
                     )
-                    .catch(() => {}),
+                    .then(() => setLoadFailed(false))
+                    .catch(() => setLoadFailed(true)),
             search ? 300 : 0,
         );
 
@@ -176,6 +180,7 @@ function PairDialog({
             { counterpart_id: candidate.id },
             {
                 ...preserve,
+                ...pairing.callbacks,
                 onSuccess: onClose,
                 onError: (errors) =>
                     setError(errors.transfer ?? errors.counterpart_id ?? null),
@@ -208,14 +213,23 @@ function PairDialog({
                 >
                     {http.processing
                         ? 'Searching…'
-                        : search.trim()
-                          ? `${candidates.length} unpaired ${candidates.length === 1 ? 'transaction' : 'transactions'} in other accounts`
-                          : candidates.length === 0
-                            ? 'No opposite amount within 3 days. Search for a counterpart.'
-                            : `${candidates.length} ${candidates.length === 1 ? 'candidate' : 'candidates'}: opposite amount within 3 days, closest first`}
+                        : loadFailed
+                          ? 'Couldn’t load candidates. Check your connection and search again.'
+                          : search.trim()
+                            ? `${candidates.length} unpaired ${candidates.length === 1 ? 'transaction' : 'transactions'} in other accounts`
+                            : candidates.length === 0
+                              ? 'No opposite amount within 3 days. Search for a counterpart.'
+                              : `${candidates.length} ${candidates.length === 1 ? 'candidate' : 'candidates'}: opposite amount within 3 days, closest first`}
                 </p>
-                {error && <p className="text-sm text-destructive">{error}</p>}
-                <ul className="max-h-80 divide-y overflow-y-auto">
+                {error && (
+                    <p
+                        role="alert"
+                        className="text-sm text-destructive-foreground"
+                    >
+                        {error}
+                    </p>
+                )}
+                <ul className="max-h-80 divide-y overflow-y-auto overscroll-contain">
                     {candidates.map((candidate) => (
                         <li
                             key={candidate.id}
@@ -239,6 +253,7 @@ function PairDialog({
                                     size="sm"
                                     variant="outline"
                                     aria-label={`Pair with ${candidate.description} on ${candidate.date} in ${candidate.account}`}
+                                    disabled={pairing.pending}
                                     onClick={() => pair(candidate)}
                                 >
                                     Pair

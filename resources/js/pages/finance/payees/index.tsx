@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { index } from '@/routes/finance/payees';
+import { usePendingVisit } from '@/hooks/use-pending-visit';
 
 type PayeeRow = { id: number; name: string; transactions_count: number };
 
@@ -18,11 +19,12 @@ export default function Payees({ payees }: { payees: PayeeRow[] }) {
         mode: 'rename' | 'merge';
     } | null>(null);
     const [into, setInto] = useState('');
+    const merging = usePendingVisit();
 
     return (
         <>
             <Head title="Payees" />
-            <div className="max-w-3xl space-y-6 p-4">
+            <div className="space-y-16">
                 <Heading
                     title="Payees"
                     description="Clean merchant names. Rules assign them; the transaction list shows the payee instead of the raw description."
@@ -157,7 +159,10 @@ export default function Payees({ payees }: { payees: PayeeRow[] }) {
                                                 </NativeSelect>
                                                 <Button
                                                     size="sm"
-                                                    disabled={into === ''}
+                                                    disabled={
+                                                        into === '' ||
+                                                        merging.pending
+                                                    }
                                                     onClick={() =>
                                                         router.post(
                                                             PayeeController.merge.url(
@@ -174,6 +179,7 @@ export default function Payees({ payees }: { payees: PayeeRow[] }) {
                                                                     setEditing(
                                                                         null,
                                                                     ),
+                                                                ...merging.callbacks,
                                                             },
                                                         )
                                                     }

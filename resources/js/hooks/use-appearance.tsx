@@ -47,9 +47,13 @@ const applyTheme = (appearance: Appearance): void => {
     }
 
     const isDark = isDarkMode(appearance);
+    const root = document.documentElement;
 
-    document.documentElement.classList.toggle('dark', isDark);
-    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+    root.classList.add('no-transitions');
+    root.classList.toggle('dark', isDark);
+    root.style.colorScheme = isDark ? 'dark' : 'light';
+    void window.getComputedStyle(root).color;
+    window.setTimeout(() => root.classList.remove('no-transitions'));
 };
 
 const subscribe = (callback: () => void) => {
@@ -77,10 +81,11 @@ export function initializeTheme(): void {
 
     if (!localStorage.getItem('appearance')) {
         localStorage.setItem('appearance', 'system');
-        setCookie('appearance', 'system');
     }
 
     currentAppearance = getStoredAppearance();
+    // Refresh the cookie on every load so the server renders the stored theme and never flashes.
+    setCookie('appearance', currentAppearance);
     applyTheme(currentAppearance);
 
     // Set up system theme change listener

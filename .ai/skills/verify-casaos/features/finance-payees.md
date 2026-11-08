@@ -13,7 +13,7 @@ Help article: none
 
 ## How to reach it
 
-- Sidebar, Finance → `Payees` (`/finance/payees`).
+- Top bar, More → `Payees` (`/finance/payees`).
 - Rules create payees inline: `Set payee` → `New payee…` in the rule form.
 
 ## Drive and prove

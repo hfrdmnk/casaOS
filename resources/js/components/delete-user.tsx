@@ -87,6 +87,7 @@ export default function DeleteUser() {
                                     <DialogFooter className="gap-2">
                                         <DialogClose asChild>
                                             <Button
+                                                type="button"
                                                 variant="secondary"
                                                 onClick={() =>
                                                     resetAndClearErrors()

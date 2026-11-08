@@ -9,15 +9,14 @@
 
 @theme {
     --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
+        'Geist', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-mono:
+        'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
-
-    --color-brand: oklch(74.4% 0.181 56.458);
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -36,6 +35,7 @@
 
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
+    --color-faint: var(--faint);
 
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
@@ -43,95 +43,77 @@
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
 
+    --color-link: var(--link);
+    --color-warning: var(--warning);
+    --color-uncategorized: var(--uncategorized);
+
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
-
-    --color-chart-1: var(--chart-1);
-    --color-chart-2: var(--chart-2);
-    --color-chart-3: var(--chart-3);
-    --color-chart-4: var(--chart-4);
-    --color-chart-5: var(--chart-5);
-
-    --color-sidebar: var(--sidebar);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/*
+ * One warm-neutral temperature (hue 80) for every surface, line and text.
+ * Colour is reserved for data: categories share lightness and chroma
+ * (--category-l, --category-c) and differ only in hue.
+ */
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    color-scheme: light;
+    --background: oklch(0.993 0.002 80);
+    --foreground: oklch(0.22 0.004 80);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.22 0.004 80);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
+    --popover-foreground: oklch(0.22 0.004 80);
+    --primary: oklch(0.22 0.004 80);
+    --primary-foreground: oklch(0.985 0.002 80);
+    --secondary: oklch(0.962 0.003 80);
+    --secondary-foreground: oklch(0.22 0.004 80);
+    --muted: oklch(0.965 0.003 80);
+    --muted-foreground: oklch(0.46 0.005 80);
+    --faint: oklch(0.56 0.005 80);
+    --accent: oklch(0.22 0.004 80 / 0.045);
+    --accent-foreground: oklch(0.22 0.004 80);
+    --destructive: oklch(0.58 0.2 27);
+    --destructive-foreground: oklch(0.58 0.2 27);
+    --link: oklch(0.56 0.16 255);
+    --warning: oklch(0.54 0.13 62);
+    --uncategorized: oklch(0.86 0.003 80);
+    --category-l: 0.68;
+    --category-c: 0.13;
+    --border: oklch(0.22 0.004 80 / 0.08);
+    --input: oklch(0.22 0.004 80 / 0.14);
+    --ring: oklch(0.5 0.005 80);
+    --radius: 0.5rem;
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    color-scheme: dark;
+    --background: oklch(0.16 0.003 80);
+    --foreground: oklch(0.95 0.003 80);
+    --card: oklch(0.19 0.004 80);
+    --card-foreground: oklch(0.95 0.003 80);
+    --popover: oklch(0.21 0.004 80);
+    --popover-foreground: oklch(0.95 0.003 80);
+    --primary: oklch(0.95 0.003 80);
+    --primary-foreground: oklch(0.18 0.003 80);
+    --secondary: oklch(0.22 0.004 80);
+    --secondary-foreground: oklch(0.95 0.003 80);
+    --muted: oklch(0.21 0.004 80);
+    --muted-foreground: oklch(0.7 0.004 80);
+    --faint: oklch(0.6 0.004 80);
+    --accent: oklch(0.95 0.003 80 / 0.06);
+    --accent-foreground: oklch(0.95 0.003 80);
+    --destructive: oklch(0.58 0.17 25);
+    --destructive-foreground: oklch(0.7 0.16 25);
+    --link: oklch(0.74 0.11 255);
+    --warning: oklch(0.78 0.11 70);
+    --uncategorized: oklch(0.4 0.003 80);
+    --category-l: 0.72;
+    --category-c: 0.105;
+    --border: oklch(0.95 0.003 80 / 0.08);
+    --input: oklch(0.95 0.003 80 / 0.14);
+    --ring: oklch(0.72 0.004 80);
 }
 
 @layer base {
@@ -139,7 +121,53 @@
         @apply border-border;
     }
 
+    html {
+        -webkit-text-size-adjust: 100%;
+        font-synthesis: none;
+    }
+
     body {
         @apply bg-background text-foreground;
     }
+
+    button,
+    a,
+    input,
+    select,
+    textarea,
+    [role='button'] {
+        touch-action: manipulation;
+    }
+
+    h1,
+    h2,
+    h3 {
+        text-wrap: balance;
+    }
+
+    p {
+        text-wrap: pretty;
+    }
+}
+
+/*
+ * tw-animate-css has no reduced-motion handling: keep the fades, drop the
+ * zoom and slide. Unlayered, so it wins over the animation utilities.
+ */
+@media (prefers-reduced-motion: reduce) {
+    .animate-in,
+    .animate-out {
+        --tw-enter-scale: 1;
+        --tw-exit-scale: 1;
+        --tw-enter-translate-x: 0;
+        --tw-enter-translate-y: 0;
+        --tw-exit-translate-x: 0;
+        --tw-exit-translate-y: 0;
+    }
+}
+
+/* Set for one frame while the theme switches, so colours don't tween at different speeds. */
+.no-transitions,
+.no-transitions * {
+    transition: none !important;
 }

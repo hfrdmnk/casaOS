@@ -22,7 +22,7 @@ export default function ConfirmPassword() {
                     submit: confirmStore(),
                 }}
                 label="Confirm with passkey"
-                loadingLabel="Confirming..."
+                loadingLabel="Confirming…"
                 separator="Or confirm with password"
             />
 

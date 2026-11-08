@@ -13,7 +13,7 @@ Help article: none
 
 ## How to reach it
 
-- Sidebar, Finance → `Transactions` (`/finance/transactions`), Finance → `Categories` (`/finance/categories`).
+- Top bar, `Transactions` (`/finance/transactions`); top bar, More → `Categories` (`/finance/categories`).
 - An account page's `All transactions` link (`?account=<id>`).
 
 ## Drive and prove

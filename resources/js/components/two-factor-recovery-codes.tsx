@@ -100,7 +100,7 @@ export default function TwoFactorRecoveryCodes({
                 </div>
                 <div
                     id="recovery-codes-section"
-                    className={`relative overflow-hidden transition-all duration-300 ${codesAreVisible ? 'h-auto opacity-100' : 'h-0 opacity-0'}`}
+                    className={`relative overflow-hidden transition-opacity duration-300 ${codesAreVisible ? 'h-auto opacity-100' : 'h-0 opacity-0'}`}
                     aria-hidden={!codesAreVisible}
                 >
                     <div className="mt-3 space-y-3">
@@ -148,7 +148,7 @@ export default function TwoFactorRecoveryCodes({
                                         Each recovery code can be used once to
                                         access your account and will be removed
                                         after use. If you need more, click{' '}
-                                        <span className="font-bold">
+                                        <span className="font-semibold">
                                             Regenerate codes
                                         </span>{' '}
                                         above.

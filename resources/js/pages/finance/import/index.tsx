@@ -22,7 +22,7 @@ export default function ImportIndex({
     return (
         <>
             <Head title="Import" />
-            <div className="space-y-8 p-4">
+            <div className="space-y-16">
                 <Heading
                     title="Import"
                     description="Upload a bank CSV. A file whose shape matches saved mappings imports straight away; any other file opens the mapper."
@@ -109,5 +109,6 @@ export default function ImportIndex({
 }
 
 ImportIndex.layout = {
+    wide: true,
     breadcrumbs: [{ title: 'Import', href: index() }],
 };

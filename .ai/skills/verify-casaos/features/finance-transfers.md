@@ -11,13 +11,13 @@ Help article: none
 - `transfers-auto` import pairs unambiguous transfers; the batch summary shows `Paired as transfers`; a tie (one side with several equally close candidates) becomes suggestions.
 - `transfers-list` `/finance/transactions`: a transfer shows `Transfer to|from <account>` or `Transfer, no counterpart` instead of the category select, with `paired automatically` / `marked by rule` / `set by hand`; rows in an open suggestion show `suggested transfer`. Filter `Transfers`: All transactions / Transfers / Not transfers / Suggested transfers. `Find transfers` button and an `N transfer suggestions` link.
 - `transfers-actions` the row menu `Transfer actions for <description>`: `Pair with…` (dialog `Pair as transfer` with candidates, `Search counterparts`, `Pair with <description> on <date> in <account>`), `Unpair` (both sides stay transfers without a counterpart, set by hand), `Mark as transfer (no counterpart)`, `Not a transfer` (unmark; an automatic counterpart goes back to plain).
-- `transfers-suggestions` `/finance/transfers` (sidebar `Transfers`): `transfer-counts`, one `suggestion` row per candidate pair with `Confirm …` / `Dismiss …`. Dismissed pairs are never suggested or paired again.
+- `transfers-suggestions` `/finance/transfers` (top bar `Transfers`): `transfer-counts`, one `suggestion` row per candidate pair with `Confirm …` / `Dismiss …`. Dismissed pairs are never suggested or paired again.
 - `transfers-rule` rule action `Mark as transfer` (no value) marks matches as transfers without a counterpart and clears their category; pairing may still give them one.
 - `transfers-undo` undoing a batch breaks every pair with a row it created (or completed in place); the surviving side goes back to plain (and gets its category back) when pairing made it a transfer, or stays a transfer without counterpart when a rule or the user marked it.
 
 ## How to reach it
 
-- Sidebar, Finance → `Transfers` (`/finance/transfers`) and `Transactions` (`/finance/transactions?transfer=yes|no|suggested`).
+- Top bar, `Transfers` (`/finance/transfers`) and `Transactions` (`/finance/transactions?transfer=yes|no|suggested`).
 - Batch page `/finance/batches/<id>`: `Paired as transfers` in `batch-summary`, a `Review suggestions` link when there are some.
 
 ## Drive and prove
