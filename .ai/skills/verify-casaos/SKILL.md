@@ -45,6 +45,7 @@ If the session cannot get a database, frontend build or running server (a CI or 
 | API token for the finance MCP server        | `php artisan verify:mcp-token <scenario> [--read-only]` prints `.token` and `.url`                                                                                     |
 | Current TOTP code for a two-factor scenario | `php artisan verify:inspect <scenario> \| jq -r .account.two_factor.current_code`                                                                                      |
 | Browser                                     | `agent-browser` (preinstalled in orbs; `agent-browser skills get core --full` for usage)                                                                               |
+| WebAuthn virtual authenticator (passkeys)   | `CDP_URL="$(agent-browser get cdp-url)" node .ai/skills/verify-casaos/scripts/virtual-authenticator.mjs <APP_URL> [seconds] > "$RUN/authenticator.log" &`              |
 | Drain background jobs                       | `php artisan queue:work --stop-when-empty`                                                                                                                             |
 | Clean up this run                           | `php artisan verify:cleanup <scenario>`                                                                                                                                |
 | Sweep orphans from failed runs              | `php artisan verify:cleanup --stale [--hours=0] [--dry-run]`                                                                                                           |
@@ -53,10 +54,11 @@ What they do:
 
 - `verify:scenario` creates one user `verify-<id>@casaos.test` with a generated password and prints `scenario` (the id), `user_id`, `email`, `password` and per-state values (the `two-factor` state prints `two_factor_secret` and `recovery_codes`).
 - `verify:login` prints a signed, expiring `/_verify/login/<user>` URL. Opening it logs in (skipping password and two-factor) and redirects to `--path`. It only works for scenario users; any other user gets 404, and a changed query string gets 403. To prove the real login form, use `email` and `password` from the scenario on `/login` instead.
-- `verify:inspect` prints `finance` (accounts with `balance_today`, snapshots and their `difference`, transaction counts by status, by category and by who set the category and payee (`category_source`/`payee_source`: `manual`, `rule`), `transfers` (counts `by_source` `auto`/`rule`/`manual`, `pairs`, `without_counterpart`, integrity checks `pairs_with_different_timestamps`/`pairs_with_unequal_amounts`/`orphans`, `suggestions_open`/`suggestions_dismissed`, `suggestions` and `pair_list`), `subscriptions` (counts `by_status`/`by_source`, `monthly_total`, `linked_transactions`, `link_source`, `suggestions_open`/`suggestions_dismissed`, each subscription with its `payments`, and the suggestions), `dashboard` (this month's `net_worth`, `stale_since`, `accounts_by_type`, `accounts_flagged`, `spending_by_category`, `upcoming`, `monthly_recurring`, `attention`), categories, payees with counts, rules in order, mappings, batches) and `account`: name, email, timestamps, `sessions` count, `passkeys`, `api_tokens` (name, abilities, `last_used_at`), and `two_factor` (`enabled`, `confirmed_at`, `recovery_codes_remaining`, `current_code`).
+- `verify:inspect` prints `finance` (accounts with `balance_today`, snapshots and their `difference`, transaction counts by status, by category and by who set the category and payee (`category_source`/`payee_source`: `manual`, `rule`), `transfers` (counts `by_source` `auto`/`rule`/`manual`, `pairs`, `without_counterpart`, integrity checks `pairs_with_different_timestamps`/`pairs_with_unequal_amounts`/`orphans`, `suggestions_open`/`suggestions_dismissed`, `suggestions` and `pair_list`), `subscriptions` (counts `by_status`/`by_source`, `monthly_total`, `linked_transactions`, `link_source`, `suggestions_open`/`suggestions_dismissed`, each subscription with its `payments`, and the suggestions), `dashboard` (always the current `month`: `net_worth`, `stale_since`, `spending_total`, `accounts_by_type`, `accounts_flagged`, `spending_by_category`, `upcoming`, `monthly_recurring`, `attention`), categories, payees with counts, rules in order, mappings, batches) and `account`: name, email, timestamps, `sessions` count, `passkeys`, `api_tokens` (name, abilities, `last_used_at`), and `two_factor` (`enabled`, `confirmed_at`, `recovery_codes_remaining`, `current_code`).
 - `verify:mcp-token` creates a Sanctum personal access token for the scenario user, as Settings → API tokens does, with `finance:read` and `finance:write` (or only `finance:read` with `--read-only`), and prints the plain `token` (shown only here), `abilities` and the MCP `url`. It proves nothing about the Settings page; drive that in the browser.
 - `verify:mail` reads mail captured for any `verify-<id>[+tag]@casaos.test` address, whatever the mailer: subject, from, to, text, html, `links`, attachment names. Captures live in `storage/verify/mail/<id>/`.
 - `verify:cleanup` deletes only scenario users, plus their sessions, captured mail and leftover finance uploads (`storage/app/private/finance-imports/<user_id>/`). User-owned rows (passkeys) cascade. It never touches `storage/verify/runs/`.
+- `scripts/virtual-authenticator.mjs` (owned by this skill) adds a WebAuthn virtual authenticator to the agent-browser page and holds it while it runs; see [passkeys](features/passkeys.md).
 
 Browser setup for every run:
 
@@ -69,6 +71,21 @@ agent-browser set viewport 1280 720 2
 Prefer stable handles: roles and accessible names (`agent-browser find role button click --name "Save"`, `find label "Name" fill ...`), then `data-test` attributes (`logout-button`). Never generated class names or DOM position. Inertia pages set the document title to `<Page> - casaOS`; use it (`agent-browser get title`) to confirm where you are.
 
 Add module levers without touching the commands: implement `App\Verification\Contracts\ScenarioState` (a named state) or `App\Verification\Contracts\Inspector` (a top-level key in `verify:inspect`) and tag the class with `ScenarioState::TAG` / `Inspector::TAG` in the module's service provider (see `App\Providers\VerificationServiceProvider`). Module tables must reference `users` with `cascadeOnDelete()` so cleanup removes their scenario rows. Add a feature file for the module in `features/`.
+
+### Driving notes
+
+- `find` has no `select` action; choose options with `agent-browser select 'select[aria-label="Category for Migros"]' Groceries` (or an `#id`).
+- Native confirms (`Delete …?`, `Undo this import?`) block every command until handled: stub them before the click with `agent-browser eval "window.confirm=()=>true"`, or run `agent-browser dialog accept` right after.
+- Wait for results with `agent-browser wait --text "<toast>"` instead of fixed sleeps; toasts stack bottom right and cover buttons there; before clicking near them run `agent-browser wait --fn "!document.querySelector('[data-sonner-toast]')"`. `wait --text` now and then misses a toast that is on screen; if it times out, check `eval "document.body.innerText.includes('<toast>')"` before calling the step failed, or wait with `wait --fn` on that expression.
+- Row actions repeat their accessible name across rows (`Delete`, `Rename`, `Subscription actions for <description>`). Click inside the row (`eval` on the `tr` that contains the text) or take the `button` ref from `snapshot -i`.
+- The app uses `data-test`, which `find testid` does not match; use CSS (`'[data-test=result-count]'`).
+- Dropdown menus (`Account menu`, `More`) open after a short animation; run `agent-browser wait '[role=menuitem]'` before clicking an item.
+- `verify:login` in a browser that is already signed in keeps the old session's data, including a password confirmation. For routes behind `Confirm password`, log the second user in from a second session (`AGENT_BROWSER_SESSION="$AGENT_BROWSER_SESSION-b"`).
+- Cross-user writes (the 404 negatives) need the other user's session and XSRF token. Open a page as that user, then:
+
+```bash
+agent-browser eval "(async()=>{const x=decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)[1]);const r=await fetch('/finance/payees/<id>',{method:'DELETE',headers:{'X-XSRF-TOKEN':x,'Accept':'application/json'}});return r.status})()"
+```
 
 ## Protocol
 

@@ -14,7 +14,7 @@ Help article: none
 
 - User menu, `Settings` (lands on Profile).
 - `/settings` redirects to `/settings/profile`.
-- Settings side nav, `Profile`.
+- Settings tabs under the page header (`navigation "Settings"`), `Profile`.
 
 ## Drive and prove
 
@@ -26,7 +26,7 @@ Preconditions:
 - **Update name.** `agent-browser find label "Name" fill "Verify Renamed"`, then `agent-browser find role button click --name "Save"`. A toast reads `Profile updated.`; screenshot it immediately.
 - **Update email.** Fill `Email address` with `verify-$ID+new@casaos.test` and Save. Same toast.
 - **State.** `verify:inspect "$ID"` shows `account.name` `Verify Renamed` and `account.email` `verify-$ID+new@casaos.test`. Save as `inspect-after.json`.
-- **Second view.** Reload; the inputs show the saved values and the user menu shows the new name.
+- **Second view.** Reload; the inputs show the saved values. Open `Account menu`: its header shows the new name and email (the avatar button itself shows only initials).
 - **Negative.** Clear `Name` and Save: the browser's `required` check blocks submission (or, after removing it, the server shows an error). Fill `Email address` with the address of another scenario (create a second one) and Save: the inline error reads `The email has already been taken.` and `verify:inspect` is unchanged.
 
 ## Evidence

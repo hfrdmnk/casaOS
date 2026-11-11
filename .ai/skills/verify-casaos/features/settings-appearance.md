@@ -11,7 +11,7 @@ Help article: none
 
 ## How to reach it
 
-- Settings side nav, `Appearance`; `/settings/appearance`.
+- Settings tabs under the page header (`navigation "Settings"`), `Appearance`; `/settings/appearance`.
 
 ## Drive and prove
 

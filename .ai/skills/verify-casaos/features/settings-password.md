@@ -12,7 +12,7 @@ Help article: none
 
 ## How to reach it
 
-- Settings side nav, `Security`.
+- Settings tabs under the page header (`navigation "Settings"`), `Security`.
 - `/settings/security` directly.
 
 ## Drive and prove
@@ -22,8 +22,8 @@ Preconditions:
 - Scenario with no states. Logged in via `verify:login "$ID" --path=/settings/security`. Note `password` from `scenario.json` as `$PW`.
 
 - **Confirm gate.** The title is `Confirm password - casaOS`. Fill `Password` with `$PW` and click `Confirm password`. The title becomes `Security settings - casaOS`.
-- **Negative.** Fill `Current password` with `wrong-password`, new and confirm with `new-Password-123`, Save. An inline error appears under `Current password`.
-- **Update.** Fill `Current password` with `$PW`, `New password` and `Confirm password` with `new-Password-123`, Save. A toast reads `Password updated.`.
+- **Negative.** Fill `Current password` with `wrong-password`, new and confirm with `new-Password-123`, Save. The inline error `The password is incorrect.` appears under `Current password`.
+- **Update.** Fill `Current password` with `$PW`, `New password` and `Confirm password` with `new-Password-123`, Save. A toast reads `Password updated.` (`agent-browser wait --text "Password updated."`; a fixed sleep can screenshot before the response arrives).
 - **Prove the new password.** Log out (user menu, `Log out`), log in on `/login` with the scenario email and `new-Password-123`; the dashboard renders. The old `$PW` is rejected with `These credentials do not match our records.`.
 
 ## Evidence

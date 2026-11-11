@@ -8,10 +8,10 @@ Help article: none
 
 ## Sub-features
 
-- `rules-list` `/finance/rules`: order with `Move <rule> up/down`, `Enable <rule>` checkbox, `Edit`, `Apply…`, `Delete` (confirm dialog).
-- `rules-form` `New rule` / `Edit`: `Name (optional)`, `Condition N field/operator/value`, `Add condition`, `Action N` and `Action N value` (`New payee…` shows `Action N new payee name`), `Create rule` / `Save rule`. The right column `Matching transactions` updates live (`preview-count`: `N matching transactions`).
+- `rules-list` `/finance/rules`: order with `Move <rule> up/down`, `Enable <rule>` checkbox, `Edit`, `Apply…`, `Delete` (native confirm `Delete <rule>? Transactions keep the values it set.`, toast `Rule deleted.`).
+- `rules-form` `New rule` / `Edit` (`New rule - casaOS` / `Edit rule - casaOS`): `Name (optional)`, `Enabled`, `Condition N field/operator/value`, `Add condition`, `Add action` (a new form starts with no action), `Action N` and `Action N value` (`New payee…` shows `Action N new payee name`), `Create rule` / `Save rule` (toasts `Rule created.` / `Rule saved.`). The right column `Matching transactions` updates live (`preview-count`: `1 matching transaction`, `N matching transactions`).
 - `rules-from-transaction` the wand button `Create rule from <raw description>` on a transaction row opens the form with `Description contains <raw description>`.
-- `rules-apply` `Apply all rules…` (or `Apply…` on one rule) opens a dry run: `apply-counts` (transactions to change, category changes, payee changes) and a sample with `old → new`; `Apply to N transactions` writes it and toasts `Rules changed N transactions (C categories, P payees).`
+- `rules-apply` `Apply all rules…` (or `Apply…` on one rule, `Apply <rule> - casaOS`) opens a dry run: `apply-counts` (`Transactions to change`, `Category changes`, `Payee changes`, `Marked as transfers`) and a sample with `Category: — → Dining`; `Apply to N transactions` (`Apply to 1 transaction`; disabled `Nothing to change` at 0) writes it and toasts `Rules changed N transactions (C categories, P payees, T transfers).` (`Rules changed 1 transaction (…)` for one).
 - `rules-import` imports run the rules on created rows and on rows completed in place (rule-owned fields only). The batch summary shows `Set by rules`; undo restores what the import's rules changed.
 - `rules-manual-wins` a category or payee chosen by hand (`set by hand`) survives every apply.
 
@@ -24,10 +24,11 @@ Help article: none
 
 Preconditions:
 
-- Scenario with `finance-empty` and a file imported through [finance-import](./finance-import.md) (the owner's `storage/app/private/revolut-sample.csv` when present, else `tests/Fixtures/finance/two-products.csv`); or `finance-rules` for a ready rule.
+- Scenario with `finance-empty` and a file imported through [finance-import](./finance-import.md) (the owner's `storage/app/private/revolut-sample.csv` when present, else `tests/Fixtures/finance/two-products.csv`, where `Description contains coffee bar` matches 2 rows); or `finance-rules` for a ready rule (`Migros`, applied; `Coffee` is a pending row).
 
-- **Create.** `New rule`; fill `Condition 1 value`, pick operator, add actions; wait for `preview-count` and screenshot the form with its matches; `Create rule`. For a payee use `New payee…` and a name.
-- **From a transaction.** On `/finance/transactions` click `Create rule from <description>`: `Condition 1 value` is pre-filled.
+- **Create.** `New rule`; fill `Condition 1 value`, pick operator (`agent-browser select 'select[aria-label="Condition 1 operator"]' "starts with"`), `Add action` and choose `Action 1` / `Action 1 value` with `agent-browser select`; wait for `preview-count` and screenshot the form with its matches; `Create rule`. For a payee use a second `Add action` (it picks `Set payee`), `New payee…` and a name.
+- **From a transaction.** On `/finance/transactions` click `Create rule from <description>`: `Condition 1 value` is pre-filled (`Coffee` on `finance-rules`: `1 matching transaction`).
+- **List.** `Move <rule> up` reorders (`inspect` `rules` order), `Enable <rule>` toggles `enabled`, `Edit` and `Apply…` open their pages, `Delete` removes the rule.
 - **Dry run and apply.** `Apply all rules…`: screenshot `apply-counts` and the sample; save `inspect` before; `Apply to N transactions`; `verify:inspect` `transactions.category_source.rule` and `by_category` match the dry run.
 - **Manual wins.** Hand-set one categorized row to another category (`set by hand`); `Apply all rules…` again: the row is not in the sample and keeps its category in `inspect`.
 - **On import.** Undo every batch (`transactions.total` 0), re-import the same file: the batch shows `Set by rules` > 0 and `category_source.rule` equals the earlier count, without applying.

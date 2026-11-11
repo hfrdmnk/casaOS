@@ -24,10 +24,10 @@ Help article: none
 
 Preconditions:
 
-- Scenario with `finance-empty`, then the owner's `storage/app/private/revolut-sample.csv` imported through [finance-import](./finance-import.md) (one mapping per `Product`, date column `Started Date` with `Y-m-d H:i:s`). Without that file, use `finance-transfers` (3 pairs, a three-way tie as 2 suggestions, an unpaired `Payment from Verify Person`).
+- Scenario with `finance-empty`, then the owner's `storage/app/private/revolut-sample.csv` imported through [finance-import](./finance-import.md) (one mapping per `Product`, date column `Started Date` with `Y-m-d H:i:s`). Without that file, use `finance-transfers` (3 pairs, a three-way tie as 2 suggestions, an unpaired `Payment from Verify Person`) for the list, actions, suggestions, rule and negatives, and a separate `finance-empty` scenario with `tests/Fixtures/finance/transfers.csv` (one mapping per `Product`) for import, undo and re-import: Created 15, `Paired as transfers` 4, `2 possible transfer pairs need a decision.`, `pairs` 4 with `by_source.auto` 8.
 
 - **Paired on import.** Batch page: screenshot `batch-summary` (`Paired as transfers`). `verify:inspect` → `finance.transfers`: `pairs`, `by_source.auto`, `pairs_with_different_timestamps` 0, `pairs_with_unequal_amounts` 0, `orphans` 0. `pair_list` lists each pair with both timestamps; compare it with the file (same `Started Date`, opposite `Amount`, other `Product`).
-- **Rule.** `New rule`: `Condition 1 value` `Payment from` (starts with), `Action 1` `Mark as transfer`, `Create rule`; `Apply all rules…` shows `Marked as transfers`; apply. Inspect: `by_source.rule` equals the matches, `without_counterpart` too, their category null. Filter `Transfers` shows `Transfer, no counterpart` / `marked by rule`.
+- **Rule.** `New rule`: `Condition 1 value` `Payment from` (starts with), `Add action`, `Action 1` `Mark as transfer` (hint `Clears the category; pairing looks for a counterpart.`), `Create rule`; `Apply all rules…` shows `Marked as transfers`; apply (`Rules changed 1 transaction (0 categories, 0 payees, 1 transfers).` on `finance-transfers`). Inspect: `by_source.rule` equals the matches, `without_counterpart` too, their category null. Filter `Transfers` shows `Transfer, no counterpart` / `marked by rule`.
 - **Unpair sticks.** Open `Transfer actions for <description>` on a paired row → `Unpair`. Both rows show `Transfer, no counterpart` / `set by hand`. `Find transfers`; inspect: `pairs` one less, `by_source.manual` 2, the two ids still without counterpart.
 - **Suggestions.** With `finance-transfers`: `/finance/transfers` lists 2 suggestions; `Dismiss` one, `Find transfers`: the other side pairs automatically, `suggestions_dismissed` 1, `suggestions_open` 0.
 - **Undo.** Undo the import: inspect `transactions.total` 0 (or only rows from other batches), `pairs` 0, `orphans` 0.
@@ -44,4 +44,6 @@ Preconditions:
 - Unpair keeps both sides as transfers without a counterpart; use `Not a transfer` to make a row count as income or spending again. Neither is ever paired automatically afterwards.
 - A row with a hand-set `Not a transfer` still gets categories from rules; a transfer never does, and the category select is replaced by the marker.
 - Dismissing one side of a tie resolves it: the next `Find transfers` pairs the remaining unique candidate.
+- In the `finance-transfers` tie both suggestion rows carry the same accessible names (`Confirm|Dismiss Verify Current 2026-10-04 10:00:00 with Verify Savings 2026-10-04 10:00:00`); click the first `[data-test="suggestion"] button[aria-label^="Dismiss"]` by selector.
+- `Transfer actions for <description>` repeats on both sides of a pair and on every same-named row; narrow with `?account=<id>&search=…` and take the `button` ref from `snapshot -i`.
 - `Find transfers` re-reads every unpaired transaction; on import, only pairs touching the batch's rows are written, so undo can remove them.

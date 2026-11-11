@@ -38,12 +38,12 @@ Preconditions:
 - A small curl wrapper (kept outside `$RUN`) that saves each request with the token redacted and the raw response under `$RUN/mcp/NN-<step>.*`.
 
 - **Handshake.** `initialize` (serverInfo `casaOS Finance`), `tools/list` (47 tools, 15 with `readOnlyHint`, no `nextCursor`), `prompts/list`, `prompts/get categorize_transactions`.
-- **Balances.** `list_accounts`: `balance_today` per account equals `expected.json` (Revolut sample: 445.46 and 1463.09).
+- **Balances.** `list_accounts`: `balance_today` per account equals `expected.json` (Revolut sample: 445.46 and 1463.09; `two-products.csv`: 16650 and 45030 Rappen, `CHF 166.50` and `CHF 450.30`).
 - **Uncategorized.** `list_transactions` with `category: "none"`, `transfer: "no"`, `per_page: 200`; group descriptions to choose a rule.
 - **Rule.** `list_categories` for the id; `preview_rule_matches` until the sample holds only the intended rows; `create_rule` (or `update_rule` to tighten); `preview_apply_rules` with its `rule_id`, and `inspect` shows nothing changed yet; `apply_rules`: counts equal the dry run. In the browser, `/finance/transactions?category=<id>` shows the same count and `/finance/rules` the rule.
 - **By hand.** `update_transaction` with a category: `category_source` `manual`. On a rule-categorized row, set another category then `null`: the rule refills it (`rules_filled`).
 - **Transfers.** `list_transfer_suggestions`, `find_transfers`, `list_transactions` with `transfer: "yes"`.
-- **Re-import.** `import_csv` with the same file's content: `created` 0, every row `skipped_duplicate`. Replace the content with a placeholder in the saved request.
+- **Re-import.** `import_csv` with the same file's content: `created` 0, every row skipped (for `two-products.csv`: `skipped_duplicate` 9 and `skipped_reverted` 1). Replace the content with a placeholder in the saved request.
 - **Undo.** `list_import_batches` (the web batch is `blocked_by` the MCP one); `undo_import_batch` on the web batch fails with `Undo the later import batch …`; undo the MCP batch, then the web batch; `list_accounts` shows 0.
 - **Subscriptions and dashboard.** `get_dashboard_summary` for the file's month equals the web dashboard; `list_subscriptions` after marking. A `--read-only` token on every subscription write tool gets `Permission denied…`; the second user gets `Not found` on `create_subscription` (their `transaction_id`), `update_subscription`, `cancel_subscription`, `link_subscription_transaction`, `unlink_subscription_transaction`, and an empty `list_subscriptions` and dashboard.
 - **Negatives.** A `--read-only` token on `create_rule` and `apply_rules` gets `Permission denied…` and `inspect` is unchanged, while `list_rules` works. No token, `999|casaos_x` and `garbage` get 401. With the second user's token, `get_account`, `add_balance_snapshot`, `get_transaction`, `update_transaction`, `mark_transfer`, `update_rule`, `delete_rule`, `apply_rules`, `rename_payee`, `delete_payee`, `delete_category`, `get_import_batch` and `undo_import_batch` on the first user's ids are `Not found`; their list tools return no accounts, transactions, payees, rules, suggestions or batches (categories are their own defaults); `inspect` of the first user is unchanged apart from `inspected_at`.
@@ -57,7 +57,7 @@ Preconditions:
 
 ## Gotchas
 
-- Without `MCP-Protocol-Version` after `initialize`, requests still work (legacy clients); with a mismatched `MCP-Method` header the server answers 400.
+- Without `MCP-Protocol-Version` after `initialize`, requests still work (legacy clients). An unsupported `MCP-Protocol-Version` (e.g. `2024-11-05`) answers 400 `Unsupported protocol version`. A mismatched `Mcp-Method` header is ignored on these plain JSON-RPC requests (200); it is only checked when `params._meta` carries the protocol version.
 - Tool errors are HTTP 200 with `result.isError: true`; only authentication failures are HTTP 401.
 - `category` and `payee` filters are strings (`"12"` or `"none"`); an integer is accepted too.
 - Shell-quoting a regex rule value through curl: escape `$` (`^coop( pronto)?\$`).

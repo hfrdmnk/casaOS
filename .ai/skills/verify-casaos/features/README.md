@@ -9,6 +9,7 @@ What casaOS does today, how a user reaches each feature, and what proves it work
 - Base URL is `APP_URL` (`http://localhost:8000` in an orb). The browser uses a named `agent-browser` session.
 - Evidence goes to `storage/verify/runs/<YYYY-MM-DD>-<slug>/` (`$RUN`).
 - casaOS is single-user: there is no tenant model. Each feature proves its own guest/other-user denial. Finance rows belong to one user; another user gets 404, never 403.
+- Cross-user writes need the second user's session and XSRF token: send them with `fetch` from that user's page (see [SKILL.md](../SKILL.md#driving-notes)). Logging the same browser in as the second user ends the first user's session row, so compare the first user's `.finance` (not `account.sessions`) before and after.
 
 ## Features
 
@@ -20,14 +21,15 @@ App UI (logged in):
 - [Password update](./settings-password.md): `/settings/security` Update password form, behind password confirmation.
 - [Two-factor authentication](./two-factor.md): `/settings/security` enable/confirm/disable, recovery codes, `/two-factor-challenge`.
 - [Appearance](./settings-appearance.md): `/settings/appearance` Light/Dark/System.
+- [Passkeys](./passkeys.md): `/settings/security` register and remove, `Sign in with a passkey`, `Confirm with passkey`, `/.well-known/passkey-endpoints`.
 - [API tokens](./api-tokens.md): `/settings/api-tokens` create a read-only or read-and-write token, see it once, revoke it.
-- [Finance: accounts and balances](./finance-accounts.md): `/finance/accounts`, snapshots and their differences, archive.
+- [Finance: accounts and balances](./finance-accounts.md): `/finance/accounts`, snapshots and their differences, balance chart, archive.
 - [Finance: transactions and categories](./finance-transactions.md): `/finance/transactions` filters and categorizing, `/finance/categories`.
 - [Finance: CSV import](./finance-import.md): `/finance/import` mapper wizard, saved mappings, de-dup, pending/reverted, batches and undo.
 - [Finance: payees](./finance-payees.md): `/finance/payees` create, rename, merge, delete; payee display, hand-set and search in the transaction list.
 - [Finance: rules](./finance-rules.md): `/finance/rules` ordered rules with live preview, create from a transaction, dry run and apply, manual-wins, rules on import.
 - [Finance: subscriptions](./finance-subscriptions.md): `/finance/subscriptions` detection on import and `Detect subscriptions`, confirm/dismiss/cancel, `Mark as subscription` and link/unlink from a transaction, undo.
-- [Finance: dashboard](./finance-dashboard.md): `/` net worth with stale snapshots, balances by type with reconciliation flags, spending by category with a month switch, upcoming subscriptions, needs attention, empty state.
+- [Finance: dashboard](./finance-dashboard.md): `/` net worth with its chart and stale snapshots, balances by type with reconciliation flags, spending by category with a month switch, upcoming subscriptions, needs attention, empty state.
 - [Finance: transfers](./finance-transfers.md): automatic pairing on import and `Find transfers`, suggestions at `/finance/transfers`, pair/unpair/mark/unmark from a transaction, `Mark as transfer` rule action, undo.
 
 MCP (an agent with a bearer token):
@@ -44,6 +46,4 @@ CLI:
 
 ## Unmapped
 
-- Passkeys (register, log in, confirm password with a passkey): `resources/js/components/manage-passkeys.tsx`, `resources/js/components/passkey-register.tsx`, `config/fortify.php` (`Features::passkeys`). Needs a WebAuthn virtual authenticator in the browser; blocked until a recipe for one is proven. `verify:inspect` already reports `account.passkeys`.
-- Passkey discovery endpoint `GET /.well-known/passkey-endpoints`: `routes/settings.php`.
 - Health check `GET /up`: `bootstrap/app.php` (exercised by doctor, no user-facing behavior).
