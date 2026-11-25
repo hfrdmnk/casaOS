@@ -41,5 +41,4 @@ Preconditions:
 ## Gotchas
 
 - The snapshot `Date` is a native `type="date"` input. `agent-browser fill` clears it and typed keys do not reach it in headless Chromium, so the browser's `required` check silently blocks the submit. Set it directly before saving (the form reads it on submit): `agent-browser eval "document.querySelector('#snapshot-date').value='2026-10-04'"`.
-- The `Edit account` dialog stays open after a successful `Save` (toast `Account updated.`) and covers the page; press `Escape` before clicking `Archive` or anything else.
 - Headless Chromium formats de-CH amounts as `CHF` + no-break space + `2'934.60` with an ASCII apostrophe, not `’`. Match on the digits.

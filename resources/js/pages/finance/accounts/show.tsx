@@ -1,5 +1,6 @@
 import { Form, Head, Link, router } from '@inertiajs/react';
 import { AlertTriangle, Archive, ArchiveRestore, Pencil } from 'lucide-react';
+import { useState } from 'react';
 import AccountController from '@/actions/App/Http/Controllers/Finance/AccountController';
 import BalanceSnapshotController from '@/actions/App/Http/Controllers/Finance/BalanceSnapshotController';
 import { AccountFormFields } from '@/components/finance/account-form-fields';
@@ -59,6 +60,7 @@ export default function ShowAccount({
     recentTransactions: TransactionRow[];
 }) {
     const today = new Date().toISOString().slice(0, 10);
+    const [editing, setEditing] = useState(false);
 
     return (
         <>
@@ -68,7 +70,7 @@ export default function ShowAccount({
                     title={account.name}
                     description={`${account.type_label} · ${account.currency}${account.importable ? '' : ' · balance only'}${account.archived ? ' · archived' : ''}`}
                 >
-                    <Dialog>
+                    <Dialog open={editing} onOpenChange={setEditing}>
                         <DialogTrigger asChild>
                             <Button variant="outline">
                                 <Pencil /> Edit
@@ -81,6 +83,7 @@ export default function ShowAccount({
                             </DialogDescription>
                             <Form
                                 {...AccountController.update.form(account.id)}
+                                onSuccess={() => setEditing(false)}
                                 className="space-y-4"
                             >
                                 {({ processing, errors }) => (
