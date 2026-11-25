@@ -23,7 +23,7 @@ Preconditions:
 
 - **Negative first.** `agent-browser open "$APP_URL/login"`, fill `Email address` and `Password` with the scenario email and `wrong-password`, click `Log in`. The error `These credentials do not match our records.` shows; URL stays `/login`.
 - **Log in.** Fill the real password, click `Log in`. The title is `Dashboard - casaOS`. `verify:inspect "$ID"` shows `account.sessions` ≥ 1.
-- **Log out.** Open the user menu and click `Log out`. The browser ends on `/login`; opening `/` redirects back to `/login`.
+- **Log out.** Open the user menu and click `Log out`. The browser ends on `/login`; opening `/` redirects back to `/login`. `account.sessions` drops by one (to 0 when this was the only session).
 
 ## Evidence
 
@@ -33,4 +33,4 @@ Preconditions:
 ## Gotchas
 
 - Login is throttled to 5 attempts per minute per email and IP.
-- `account.sessions` counts database sessions; the session row stays after logout until it is garbage-collected, so do not assert it drops to 0.
+- `account.sessions` counts database sessions; logout deletes the browser's session row at once, so other sessions of the same user (a second agent-browser session) are what stays.

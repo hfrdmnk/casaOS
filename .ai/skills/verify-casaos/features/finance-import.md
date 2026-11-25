@@ -9,7 +9,7 @@ Help article: none
 - `import-wizard` an unknown shape opens `Map <file>` with the detected delimiter and preamble, a raw preview, and a parsed preview (`parse-summary`) once date, description and amount are chosen.
 - `import-mappings` saving a mapping per account, with a row filter (column equals value), status map, fee, balance and currency columns.
 - `import-commit` `Import now` imports through every matching mapping and lands on `Import of <file>` with created/updated/duplicate/not CHF/reverted counts and a snapshot per account.
-- `import-dedup` re-uploading the same file skips the wizard and creates 0 transactions (all `Skipped as duplicate`).
+- `import-dedup` re-uploading the same file skips the wizard and creates 0 transactions (`Skipped as duplicate`; reverted rows show as `N reverted row(s) had nothing to remove.`).
 - `import-pending` a later file with a pending row completed updates it in place; a reverted row removes it.
 - `import-reject` a file where any selected row fails to parse is rejected with line-level errors; nothing is written.
 - `import-undo` `Undo import` on a batch reverts it; an earlier batch is blocked while a later one on the same account is active.
@@ -32,10 +32,10 @@ Preconditions:
 - **Map.** For each account: check the pre-filled column guesses and status map, `agent-browser select '#mapping-filter_column' Product`, then `#mapping-filter_value` (a select when the column has few values), leave `Import into account` on `New account…`, fill `New account name`, select `#mapping-new_account_type`, fill `Mapping name`, click `Save mapping` (toast `Mapping saved.`; the form keeps its values for the next account). `parse-summary` reads e.g. `8 rows selected · all parse · 5 completed · 1 reverted · 2 pending · last balance CHF 166.50`; screenshot it before saving.
 - **Import.** Click `Import now`. Title `Import of <file> - casaOS`; screenshot `batch-summary`.
 - **State.** `verify:inspect "$ID" --only=finance`: each account's `balance_today` equals `expected.json`, snapshots have `difference` null or `0.00`.
-- **Re-upload.** Upload the same file again: no wizard, the batch summary shows Created 0 and `Skipped as duplicate` 9 for the fixture. `transactions.total` is unchanged.
+- **Re-upload.** Upload the same file again: no wizard, the batch summary shows Created 0 and `Skipped as duplicate` 9 for the fixture, plus `1 reverted row had nothing to remove.` (the first import shows that line too). `transactions.total` is unchanged.
 - **Pending completed.** With the fixture, upload `tests/Fixtures/finance/two-products-later.csv`: Created 2, Updated 1 (Kiosk completed in place), `Removed as reverted` 1 (Train ticket), `Skipped as duplicate` 3.
 - **Undo.** An earlier batch's `Undo import` is disabled with `Undo the later import of <file> first.` Undo newest first (native confirm `Undo this import? …`, toast `Import undone.`, the date line under the heading ends ` · undone`): `transactions.total` drops to 0, `batches[*].undone` true, no snapshots left.
-- **Mapping edit.** On Import, the mapping name links to `/finance/mappings/<id>/edit` (`Edit mapping <name> - casaOS`); encoding and delimiter are disabled; `Save changes` toasts `Mapping updated.` and returns to Import.
+- **Mapping edit.** On Import, the mapping name links to `/finance/mappings/<id>/edit` (`Edit mapping <name> - casaOS`); encoding, delimiter and `Lines to skip before the header` are disabled; `Save changes` toasts `Mapping updated.` and returns to Import.
 - **Negative.** Upload `tests/Fixtures/finance/simple.csv` and save a mapping for it (the guesses fit; one `New account…`), import it, then upload `tests/Fixtures/finance/broken.csv` (same shape, two bad rows). The red alert reads `2 of 3 rows could not be read. Nothing was imported.` with `Line 3 (<mapping>): Date …` and `Line 4 (<mapping>): Amount …`; `transactions.total` and the batch count are unchanged. Without a saved mapping for the shape, broken.csv only opens the wizard. Another user's `/finance/import/<upload>` is a 404 page.
 
 ## Evidence

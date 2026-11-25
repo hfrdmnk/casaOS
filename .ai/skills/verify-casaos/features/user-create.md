@@ -25,7 +25,7 @@ Preconditions:
 - **State.** `php artisan verify:inspect "$ID"` shows `account.name` `CLI User`.
 - **Log in.** Log in on `/login` with `$EMAIL` and the generated password (the last field of the `Generated password` line; quote it, it contains shell symbols); the dashboard renders with `dashboard-empty`.
 - **Prompt.** For `user-create-prompt`, use a second freed scenario address and feed the prompt through a pseudo-terminal: `(sleep 3; printf 'Prompted-Pass-123\r'; sleep 3) | script -qc "php artisan user:create 'Prompt User' verify-<id2>@casaos.test" /dev/null`. It asks `Password` and prints `Created user …` without a generated password.
-- **Negative.** Run the same command again, saving to `user-create-duplicate.txt`; it exits 1 with `The email has already been taken.`. `curl -s -o /dev/null -w '%{http_code}' "$APP_URL/register" > "$RUN/register.status"` prints `404`.
+- **Negative.** Run the `--no-interaction` command again with a redirect, not `tee` (a pipe reports `tee`'s exit code): `php artisan user:create "CLI User" "$EMAIL" --no-interaction > "$RUN/user-create-duplicate.txt" 2>&1; echo $?` prints 1, and the file has `The email has already been taken.`. `curl -s -o /dev/null -w '%{http_code}' "$APP_URL/register" > "$RUN/register.status"` prints `404`.
 
 ## Evidence
 

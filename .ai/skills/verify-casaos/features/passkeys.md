@@ -1,6 +1,6 @@
 # Passkeys
 
-A user registers passkeys at Settings → Security (`Passkeys` section, behind password confirmation), then signs in with one on `/login` (`Sign in with a passkey`, no password and no two-factor challenge) or uses one to pass the password confirmation gate (`Confirm with passkey`). Removing a passkey asks for confirmation; a removed passkey no longer signs in. `GET /.well-known/passkey-endpoints` points password managers at the enroll and manage page. Laravel Passkeys (`Features::passkeys` in `config/fortify.php`) serves the WebAuthn routes under `/user/passkeys`, `/passkeys/login` and `/passkeys/confirm`.
+A user registers passkeys at Settings → Security (`Passkeys` section, behind password confirmation), then signs in with one on `/login` (`Sign in with a passkey`, no password and no two-factor challenge) or uses one to pass the password confirmation gate (`Confirm with passkey`). Removing a passkey asks for confirmation; a removed passkey no longer signs in. `GET /.well-known/passkey-endpoints` points password managers at the enroll and manage page. Fortify (`Features::passkeys` in `config/fortify.php`) registers the WebAuthn routes under `/user/passkeys`, `/passkeys/login` and `/passkeys/confirm`, each with an `/options` route, on Laravel Passkeys' controllers.
 
 Help article: none
 
