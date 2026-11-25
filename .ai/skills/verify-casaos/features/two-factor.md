@@ -39,5 +39,7 @@ Preconditions for the challenge: `php artisan verify:scenario two-factor` (print
 ## Gotchas
 
 - TOTP codes rotate every 30 seconds; fetch `current_code` right before typing it. A code is accepted once, so a second login in the same window needs the next code.
+- After a wrong code the challenge's code input keeps the old digits, and typing more adds nothing (6 digits max). Clear it first: click `Authentication code` and `agent-browser press Backspace` six times.
+- Between `Enable 2FA` and `Confirm`, do not reload or leave the security page: loading it again drops the unconfirmed secret (`current_code` becomes null, `Enable 2FA` returns).
 - The challenge rate limit is 5 per minute per user (keyed by the session's `login.id`), across sessions.
 - The setup key and QR code are scenario secrets; screenshots in the gitignored evidence dir are fine, never paste them into a PR.

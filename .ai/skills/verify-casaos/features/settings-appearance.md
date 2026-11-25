@@ -22,6 +22,7 @@ Preconditions:
 - **Dark.** Click `Dark`. `agent-browser eval "document.documentElement.classList.contains('dark')"` returns `true`; screenshot.
 - **Persist.** Reload; still `true`. `agent-browser cookies get` (or `eval "document.cookie"`) shows `appearance=dark`.
 - **Light.** Click `Light`; the check returns `false`.
+- **System.** Click `System` (`aria-pressed` moves to it). `agent-browser set media dark`: the check returns `true`; `set media light`: `false`.
 
 ## Evidence
 

@@ -8,7 +8,7 @@ Help article: none
 
 ## Sub-features
 
-- `subscriptions-page` `/finance/subscriptions` (top bar, More → `Subscriptions`): `Active` (rows `data-test="subscription"`, `monthly-total` = count and CHF per month), `Suggestions` (rows `subscription-suggestion` with their charges, `Confirm <name>` / `Dismiss <name>`), `Cancelled` (with `Reactivate <name>`). `Edit <name>` opens a dialog (name, amount, interval, payee, description, account, next date). `Detect subscriptions`.
+- `subscriptions-page` `/finance/subscriptions` (top bar, More → `Subscriptions`): `Active` (rows `data-test="subscription"`, `monthly-total` = count and CHF per month), `Suggestions` (rows `subscription-suggestion` with their charges, `Confirm <name>` / `Dismiss <name>`), `Cancelled` (with `Reactivate <name>`; its rows are `data-test="subscription"` too, so count a section with `section[aria-labelledby=active-heading]` or `cancelled-heading`). `Edit <name>` opens a dialog (name, amount, interval, payee, description, account, next date). `Detect subscriptions`.
 - `subscriptions-mark` `/finance/transactions`: on a charge, `Subscription actions for <description>` → `Mark as subscription…` (dialog `Mark as subscription`, prefilled name, amount and Monthly; `Create subscription`), `Link to <subscription>`, `Unlink from <subscription>`. A linked row shows the `subscription-marker` badge. Filter `Subscriptions`: all / payments / not subscriptions / one subscription.
 - `subscriptions-import` an import links new matching charges (`Linked to subscriptions` in the batch summary) and moves the next date; new suggestions show as `N possible subscriptions need a decision`.
 - `subscriptions-undo` undoing a batch deletes the charges it created, unlinks pre-existing charges it linked, recomputes next dates and re-runs detection. Subscriptions are never deleted.
@@ -43,7 +43,7 @@ Preconditions:
 
 - `Undo import` uses a native confirm: click, then `agent-browser dialog accept`; until then every other command fails. Stubbing it first (`agent-browser eval "window.confirm=()=>true"`) avoids the race.
 - Every charge of a payee has the same `Subscription actions for <description>` button. Take the ref of the `button` line from `snapshot -i` (not the table cell that also holds `Transfer actions for …`), or narrow the list with `?search=` first.
-- Toasts stack bottom right at 1280×720 and cover the last row's `Confirm`/`Dismiss` buttons; a fixed 4 s sleep is not enough. Before the next click run `agent-browser wait --fn "!document.querySelector('[data-sonner-toast]')"`.
+- Toasts stack bottom right at 1280×720 and cover the last row's `Confirm`/`Dismiss` buttons; a fixed 4 s sleep is not enough. Before the next click move the pointer off them (`agent-browser mouse move 10 10`; a hovered toast never closes), then run `agent-browser wait --fn "!document.querySelector('[data-sonner-toast]')"`.
 - Hand links and unlinks do not survive undo and re-import: afterwards `Cloud storage usage` links the 12.75 charge again (`auto`) instead of the 8.90 one, so its next date moves, and the cancelled subscription's charges come back as an open suggestion.
 - The charge you mark is linked like the others (`link_source` `auto` when it matches); only `Link to` / `Unlink` from the menu are `manual`.
 - A subscription that loses all its charges on undo keeps its last next date.
